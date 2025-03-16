@@ -1,0 +1,517 @@
+import os
+import re
+import yt_dlp
+import json
+import tkinter as tk
+from tkinter import messagebox, ttk
+from threading import Thread
+from PIL import Image, ImageTk
+import tkinter.filedialog as fd
+import webbrowser
+
+class DownloadProgressWindow(tk.Toplevel):
+    def __init__(self, parent):
+        super().__init__(parent)
+        self.parent = parent
+        self.title("下載進度")
+        self.geometry("400x200")
+        self.resizable(False, False)
+
+        # 創建Canvas和Scrollbar
+        self.canvas = tk.Canvas(self)
+        self.scrollbar = ttk.Scrollbar(self, orient="vertical", command=self.canvas.yview)
+        self.scrollable_frame = tk.Frame(self, bg="#DED6D6")
+
+        # 讓scrollable_frame成為Canvas的窗口
+        self.scrollable_frame.bind(
+            "<Configure>",
+            lambda e: self.canvas.configure(
+                scrollregion=self.canvas.bbox("all")
+            )
+        )
+        self.canvas.create_window((0, 0), window=self.scrollable_frame, anchor="nw")
+
+        self.canvas.configure(yscrollcommand=self.scrollbar.set)
+
+        self.canvas.pack(side="left", fill="both", expand=True)
+        self.scrollbar.pack(side="right", fill="y")
+
+        self.progress_bar = ttk.Progressbar(self.scrollable_frame, orient="horizontal", length=380, mode="determinate")
+        self.progress_bar.pack(pady=10)
+
+        self.filename_label = tk.Label(self.scrollable_frame, text="", font=("Arial", 12), wraplength=380, justify="left", bg="#DED6D6")
+        self.filename_label.pack(pady=5)
+
+        self.eta_label = tk.Label(self.scrollable_frame, text="預估時間: 等待", font=("Arial", 12), bg="#DED6D6")
+        self.eta_label.pack(pady=5)
+    
+    def set_progress(self, value):
+        self.progress_bar["value"] = value
+        self.update_idletasks()
+    
+    def set_filename(self, filename):
+        wrapped_filename = self.wrap_text(filename, 30)
+        self.filename_label.config(text=f"下載中: {wrapped_filename}")
+        self.update_idletasks()
+    
+    def set_eta(self, eta):
+        self.eta_label.config(text=f"預估時間: {eta}")
+        self.update_idletasks()
+    
+    @staticmethod
+    def wrap_text(text, line_length):
+        lines = []
+        for i in range(0, len(text), line_length):
+            lines.append(text[i:i+line_length])
+        return "\n".join(lines)
+
+def clean_ansi_codes(text):
+    return re.sub(r'\x1b\[[0-9;]*m', '', text)
+
+def format_eta(eta_seconds):
+    if eta_seconds is None:
+        return "不適用"
+    hours, remainder = divmod(eta_seconds, 3600)
+    minutes, seconds = divmod(remainder, 60)
+    if hours > 0:
+        return f"{int(hours)}小時{int(minutes)}分{int(seconds)}秒"
+    elif minutes > 0:
+        return f"{int(minutes)}分{int(seconds)}秒"
+    else:
+        return f"{int(seconds)}秒"
+
+
+def download_video(url, format_choice, progress_window):
+    try:
+        # 設置保存下載視頻的根目錄到桌面的「youtube下載」文件夾中
+        download_folder = os.path.join(os.path.expanduser("~"), "Desktop", "youtube下載")
+        os.makedirs(download_folder, exist_ok=True)
+        
+        # 設置下載選項
+        if format_choice == "mp3":
+            ydl_opts = {
+                'format': 'bestaudio[ext=m4a]/m4a',  # 下載最佳音頻質量
+                'outtmpl': os.path.join(download_folder, '%(title)s.%(ext)s'),
+                'postprocessors': [{
+                    'key': 'FFmpegExtractAudio',
+                    'preferredcodec': 'mp3',
+                    'preferredquality': '192',
+                }],
+                'ffmpeg_location': ffmpeg_path,  # 指定 FFmpeg 路徑
+                'progress_hooks': [progress_hook(progress_window)]
+            }
+        else:
+            ydl_opts = {
+                'format': 'bestvideo[ext=mp4]+bestaudio[ext=m4a]/mp4',  # 下載最佳品質的視頻和音頻
+                'outtmpl': os.path.join(download_folder, '%(title)s.%(ext)s'),
+                'merge_output_format': 'mp4',
+                'ffmpeg_location': ffmpeg_path,  # 指定 FFmpeg 路徑
+                'progress_hooks': [progress_hook(progress_window)]
+            }
+
+        # 下載影片
+        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+            ydl.download([url])
+        if format_choice == "mp3":
+            messagebox.showinfo("成功", "音檔下載完成！")
+        else:
+            messagebox.showinfo("成功", "影片下載完成！")
+        url_entry.delete(0, tk.END)  # 清空輸入框
+        progress_window.destroy()  # 下載完成後關閉窗口
+    except Exception as e:
+        url_entry.delete(0, tk.END)  # 清空輸入框
+        messagebox.showerror("錯誤", f"下載失敗: {str(e)}")
+
+def download_playlist(playlist_url, format_choice, progress_window):
+    try:
+        # 設置保存下載視頻的根目錄到桌面的「youtube下載」文件夾中
+        download_folder = os.path.join(os.path.expanduser("~"), "Desktop", "youtube下載")
+        os.makedirs(download_folder, exist_ok=True)
+
+    
+        # 設置下載選項
+        if format_choice == "mp3":
+            ydl_opts = {
+                'format': 'bestaudio[ext=m4a]/m4a',  # 下載最佳音頻質量
+                'outtmpl': os.path.join(download_folder, '%(playlist)s', '%(title)s.%(ext)s'),
+                'postprocessors': [{
+                    'key': 'FFmpegExtractAudio',
+                    'preferredcodec': 'mp3',
+                    'preferredquality': '192',
+                }],
+                'ffmpeg_location': ffmpeg_path,  # 指定 FFmpeg 路徑
+                'progress_hooks': [progress_hook(progress_window)]
+            }
+        else:
+            ydl_opts = {
+                'format': 'bestvideo[ext=mp4]+bestaudio[ext=m4a]/mp4',  # 下載最佳品質的視頻和音頻
+                'outtmpl': os.path.join(download_folder, '%(playlist)s', '%(title)s.%(ext)s'),
+                'merge_output_format': 'mp4',
+                'ffmpeg_location': ffmpeg_path,  # 指定 FFmpeg 路徑
+                'progress_hooks': [progress_hook(progress_window)]
+            }
+
+
+
+        # 下載清單中的所有影片
+        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+            ydl.download([playlist_url])
+
+        messagebox.showinfo("成功", "清單下載完成！")
+        url_entry.delete(0, tk.END)  # 清空輸入框
+        progress_window.destroy()  # 下載完成後關閉窗口
+    except Exception as e:
+        url_entry.delete(0, tk.END)  # 清空輸入框
+        messagebox.showerror("錯誤", f"下載失敗: {str(e)}")
+        
+
+def progress_hook(progress_window):
+    def hook(d):
+        if d['status'] == 'downloading':
+            progress_percent_str = clean_ansi_codes(d.get('_percent_str', '0%'))
+            try:
+                progress_percent = float(progress_percent_str.strip('%'))
+            except ValueError:
+                progress_percent = 0
+            filename = d.get('filename', '未知文件')
+            eta = format_eta(d.get('eta', None))
+
+            # 安全地更新 GUI
+            progress_window.after(0, lambda: progress_window.set_progress(progress_percent))
+            progress_window.after(0, lambda: progress_window.set_filename(filename))
+            progress_window.after(0, lambda: progress_window.set_eta(eta))
+        elif d['status'] == 'finished':
+            progress_window.after(0, lambda: progress_window.set_progress(100))
+            progress_window.after(0, lambda: progress_window.set_filename("下載完成"))
+            progress_window.after(0, lambda: progress_window.set_eta("不適用"))
+    return hook
+
+
+
+def on_obutton_click():
+    new_window = tk.Toplevel(root)
+    new_window.title("說明")
+    new_window.geometry("600x200")
+    new_window.resizable(False, False)
+    
+    # 創建一個Frame來容納內容和滾動條
+    content_frame = tk.Frame(new_window)
+    content_frame.pack(side="left", fill="both", expand=True)
+
+    # 創建滾動條
+    v_scrollbar = ttk.Scrollbar(content_frame, orient=tk.VERTICAL)
+    v_scrollbar.pack(side="right", fill="y")
+
+    # 創建一個Canvas來顯示內容
+    canvas = tk.Canvas(content_frame, yscrollcommand=v_scrollbar.set)
+    canvas.pack(side="left", fill="both", expand=True)
+    
+    v_scrollbar.config(command=canvas.yview)
+
+    # 創建一個內部Frame來放置滾動內容
+    inner_frame = tk.Frame(canvas, bg="#DED6D6")
+    canvas.create_window((0, 0), window=inner_frame, anchor="nw")
+
+    # 當內容變化時，更新Canvas的scrollregion
+    inner_frame.bind(
+        "<Configure>",
+        lambda e: canvas.configure(scrollregion=canvas.bbox("all"))
+    )
+    
+    # 添加說明文本，設置為中間對齊和字型大小為20
+    label_text = "你好\n這裡是使用說明:\n在使用前請先下載ffmpeg\n在下載器中有一個輸入框可以輸入\n\n單一影片的網址\n\n或\n\n播放清單的網址\n\n如果是自己的播放清單請將它設成不公開\n\n輸入後按下下載鍵即可下載。\n\n設置按鈕:\n可以輸入圖片路徑更換背景圖示\n或者輸入色碼更換背景顏色和文字背景顏色\n按下應用後即可更換\n\n作者:"
+    label = tk.Label(inner_frame, text=label_text, justify=tk.CENTER, font=("Arial", 20), bg="#DED6D6")
+    label.pack(pady=10, padx=10, anchor="center")
+
+    link1 = tk.Label(inner_frame, text="IG: yt.download_", fg="blue", cursor="hand2")
+    link1.pack()
+    link1.bind("<Button-1>", lambda e: open_link("https://www.instagram.com/yt.download_"))
+    
+    link2 = tk.Label(inner_frame, text="官網: yt下載器", fg="blue", cursor="hand2")
+    link2.pack()
+    link2.bind("<Button-1>", lambda e: open_link("https://sites.google.com/view/yt-to-dowload"))
+
+def open_link(url):
+    webbrowser.open(url)
+
+def show_custom_messagebox():
+    # 創建一個新的窗口
+    top = tk.Toplevel()
+    top.title("提示")
+    top.geometry("300x200")
+    top.resizable(False, False)
+    top.attributes('-topmost', True)
+
+    message = tk.Label(top, text="點擊下面的網址下載ffmpeg:\n程式預設讀取放在C槽的ffmpeg，\n也可以自訂ffmpeg路徑\n確保路徑正確否則程式無法正常執行", padx=10, pady=10)
+    message.pack()
+
+    # 添加可點擊的網址
+    link = tk.Label(top, text="訪問 官網下載ffmpeg", fg="blue", cursor="hand2")
+    link.pack()
+    link.bind("<Button-1>", lambda e: open_link("https://sites.google.com/view/yt-to-dowload/教學/ffmpeg?authuser=0"))
+
+    message1 = tk.Label(top, text="自訂ffmpeg路徑請前往設置", padx=10, pady=10)
+    message1.pack()
+
+    to_settings_button = tk.Button(top, text="前往設置", command=lambda: [top.destroy(), on_settings_button_click()])
+    to_settings_button.pack()
+
+    # 添加關閉按鈕
+    close_button = tk.Button(top, text="關閉", command=top.destroy)
+    close_button.pack()
+
+def on_download_button_click():
+    folder_path = ffmpeg_path
+
+    if not os.path.exists(folder_path):
+        show_custom_messagebox()
+        
+    else:
+        global format_var
+        url = url_entry.get()
+        format_choice = format_var.get()
+        if url:
+            progress_window = DownloadProgressWindow(root)
+            if 'list=' in url:  # 如果URL包含 'list=' 則認為是YouTube清單
+                Thread(target=download_playlist, args=(url, format_choice, progress_window)).start()
+            else:
+                Thread(target=download_video, args=(url, format_choice, progress_window)).start()
+        else:
+            messagebox.showwarning("警告", "請輸入有效YouTube網址")
+            url_entry.delete(0, tk.END)  # 清空輸入框
+    
+
+# 配置文件路徑
+CONFIG_FILE = os.path.join(os.path.expanduser("~"), "Desktop", "youtube_downloader_config.json")
+# 定義全局變數
+format_var = None
+text_bg_color = "#DED6D6"  # 預設文字背景色碼
+ffmpeg_path = 'C:/ffmpeg/bin'
+def load_config():
+    """從配置文件中加載設置"""
+    global ffmpeg_path  # 確保使用全局變量
+    if os.path.exists(CONFIG_FILE):
+        with open(CONFIG_FILE, 'r') as f:
+            config = json.load(f)
+            return (config.get('bg_image_path', ''), 
+                    config.get('text_bg_color', '#DED6D6'),
+                    config.get('ffmpeg_path', ffmpeg_path))  # 加載 FFmpeg 路徑
+    return '', '#DED6D6', ffmpeg_path  # 默認設置
+
+def save_config(bg_image_path, text_bg_color, ffmpeg_path):
+    """將設置保存到配置文件"""
+    config = {
+        'bg_image_path': bg_image_path,
+        'text_bg_color': text_bg_color,
+        'ffmpeg_path': ffmpeg_path
+    }
+    with open(CONFIG_FILE, 'w') as f:
+        json.dump(config, f)
+
+
+
+def apply_settings():
+    global text_bg_color, setting_var, entry, entr1, settings_window, ffmpeg_path
+    option = setting_var.get()
+    value = entry.get()
+    value1 = entr1.get()
+
+    print(f"選擇的選項: {option}")  # 調試輸出
+    print(f"圖片路徑輸入框: {value}")  # 調試輸出
+    print(f"FFmpeg 路徑輸入框: {value1}")  # 調試輸出
+
+    if option == "圖片路徑":
+        if os.path.isfile(value):
+            try:
+                image = Image.open(value)
+                bg_image = ImageTk.PhotoImage(image)
+                root.bg_image = bg_image  # 保持引用防止被垃圾回收
+                root.config(bg="")  # 清除背景顏色以便顯示圖片
+                root.background_label.config(image=bg_image)
+                save_config(value, text_bg_color, ffmpeg_path)  # 保存設置
+            except Exception as e:
+                messagebox.showerror("錯誤", f"無法加載圖片: {str(e)}")
+        else:
+            messagebox.showwarning("警告", "請輸入有效的圖片路徑")
+    elif option == "色碼":
+        if re.match(r'^#(?:[0-9a-fA-F]{3}){1,2}$', value):
+            text_bg_color = value
+            # 更新文字背景顏色
+            for widget in root.winfo_children():
+                if isinstance(widget, (tk.Label, tk.Entry, tk.Button)):
+                    try:
+                        widget.config(bg=text_bg_color)
+                    except tk.TclError as e:
+                        print(f"無法設置背景顏色: {e}")
+            save_config('', text_bg_color, ffmpeg_path)  # 保存設置
+            settings_window.destroy()
+        else:
+            messagebox.showwarning("警告", "請輸入有效的色碼")
+    elif option == "FFmpeg 路徑":
+        print(f"處理路徑: {value1}")
+        if os.path.isfile(value1):
+            try:
+                # 這裡可以根據需要進行FFmpeg路徑的處理
+                # 假設有一個變數保存FFmpeg路徑
+                if value1:
+                    # 查找 //FFmpeg 的位置
+                    ffmpeg_index = value1.find("/ffmpeg")
+                    if ffmpeg_index != -1:
+                        # 刪除 //FFmpeg 及其後面的所有內容
+                        value1 = value1[:ffmpeg_index]
+                    print(f"處理後的路徑: {value1}")
+                    value1 = value1 + "/ffmpeg/bin"
+                    print(f"FFmpeg 路徑: {value1}")
+                ffmpeg_path = value1
+                save_config('', text_bg_color, ffmpeg_path)  # 保存設置
+                settings_window.destroy()
+            except Exception as e:
+                messagebox.showerror("錯誤", f"無法加載FFmpeg 路徑: {str(e)}")
+        else:
+            messagebox.showwarning("警告", "請輸入有效的FFmpeg 路徑")
+
+
+
+
+def on_settings_button_click():
+    global setting_var, entry, entr1, settings_window, txt2_label
+    settings_window = tk.Toplevel(root)
+    settings_window.title("設置")
+    settings_window.geometry("300x400")
+    settings_window.resizable(False, False)
+    
+    txt_label = tk.Label(settings_window, text="請先選擇模式:", font=("Arial", 15))
+    txt_label.pack(pady=5)
+
+    setting_var = tk.StringVar(value="圖片路徑")
+    setting_options = ttk.Combobox(settings_window, textvariable=setting_var, values=["圖片路徑", "色碼", "FFmpeg 路徑"], state="readonly")
+    setting_options.pack(pady=10)
+
+    def on_selection(event):
+        selected_option = setting_options.get()
+        if selected_option == "圖片路徑":
+            browse_button.config(state="normal")
+            FFmpeg_button.config(state="disabled")
+            entry.config(state="normal")
+            entr1.config(state="disabled")
+            txt2_label.config(text="設置背景圖片:")
+        elif selected_option == "色碼":
+            browse_button.config(state="disabled")
+            FFmpeg_button.config(state="disabled")
+            entry.config(state="normal")
+            entr1.config(state="disabled")
+            txt2_label.config(text="設置背景色碼:")
+        elif selected_option == "FFmpeg 路徑":
+            browse_button.config(state="disabled")
+            FFmpeg_button.config(state="normal")
+            entry.config(state="disabled")
+            entr1.config(state="normal")
+
+    setting_options.bind("<<ComboboxSelected>>", on_selection)
+    
+    # 瀏覽按鈕功能
+    def browse_image():
+        file_path = fd.askopenfilename(filetypes=[("圖片文件", "*.png;*.jpg;*.jpeg;*.bmp;*.gif")])
+        if file_path:
+            entry.delete(0, tk.END)  # 清空輸入框
+            entry.insert(0, file_path)  # 插入選擇的圖片路徑
+
+    def FFmpeg_image():
+        FFmpeg_path = fd.askopenfilename(filetypes=[("FFmpeg 路徑", "*.exe")])
+        if FFmpeg_path:
+            entr1.delete(0, tk.END)  # 清空輸入框
+            entr1.insert(0, FFmpeg_path)  # 插入選擇的 FFmpeg 路徑
+            #ty = entr1.get()
+            #print(f"確認目錄存在: {ty}")
+
+    txt1_label = tk.Label(settings_window, text="在選擇相對功能按鈕:", font=("Arial", 15))
+    txt1_label.pack(pady=5)
+
+    txt2_label = tk.Label(settings_window, text="設置背景圖片:", font=("Arial", 10))
+    txt2_label.pack(pady=5)
+
+    entry = tk.Entry(settings_window, width=30)
+    entry.pack(pady=10)
+
+    browse_button = tk.Button(settings_window, text="瀏覽圖片", command=browse_image)
+    browse_button.pack(pady=10)
+
+    txt3_label = tk.Label(settings_window, text="設置FFmpeg路徑:", font=("Arial", 10))
+    txt3_label.pack(pady=5)
+
+    entr1 = tk.Entry(settings_window, width=30)
+    entr1.pack(pady=10)
+
+    FFmpeg_button = tk.Button(settings_window, text="瀏覽FFmpeg", command=FFmpeg_image)
+    FFmpeg_button.pack(pady=10)
+
+    apply_button = tk.Button(settings_window, text="應用", command=apply_settings)
+    apply_button.pack(pady=10)
+
+    # 初始化控件狀態
+    on_selection(None)
+
+
+# 創建主窗口
+root = tk.Tk()
+root.title("YouTube下載器")
+root.geometry("640x400")
+root.configure(bg="#D2CBCB")
+root.resizable(False, False)  # 禁用視窗大小調整
+
+# 加載配置
+bg_image_path, text_bg_color, ffmpeg_path = load_config()
+
+# 添加背景圖片標籤
+root.background_label = tk.Label(root, bg="#D2CBCB")
+root.background_label.place(relwidth=1, relheight=1)
+
+if bg_image_path and os.path.isfile(bg_image_path):
+    try:
+        image = Image.open(bg_image_path)
+        bg_image = ImageTk.PhotoImage(image)
+        root.bg_image = bg_image  # 保持引用防止被垃圾回收
+        root.config(bg="")  # 清除背景顏色以便顯示圖片
+        root.background_label.config(image=bg_image)
+    except Exception as e:
+        messagebox.showerror("錯誤", f"無法加載背景圖片: {str(e)}")
+
+# 設置文字背景顏色
+for widget in root.winfo_children():
+    if isinstance(widget, (tk.Label, tk.Entry, tk.Button)):
+        try:
+            widget.config(bg=text_bg_color)
+        except tk.TclError as e:
+            print(f"無法設置背景顏色: {e}")
+            
+# 創建和放置URL輸入框
+url_label = tk.Label(root, text="請輸入YouTube影片或清單的網址:", font=("Arial", 15), bg=text_bg_color)
+url_label.pack(pady=5)
+
+url_entry = tk.Entry(root, width=50, bg=text_bg_color)
+url_entry.pack(pady=70)
+
+# 創建格式選擇下拉選單
+format_label = tk.Label(root, text="選擇下載格式:", font=("Arial", 15), bg=text_bg_color)
+format_label.pack(pady=5)
+
+format_var = tk.StringVar(value="mp4")  # 默認值為 mp4
+format_menu = ttk.Combobox(root, textvariable=format_var, values=["mp4", "mp3"], state="readonly")
+format_menu.pack(pady=5)
+
+# 創建和放置下載按鈕
+download_button = tk.Button(root, text="下載", command=on_download_button_click, bg=text_bg_color)
+download_button.pack(pady=20)
+
+# 創建和放置設置按鈕
+settings_button = tk.Button(root, text="設置", command=on_settings_button_click, bg=text_bg_color)
+settings_button.pack(pady=5)
+
+setting_obutton = tk.Button(root, text="說明", command= on_obutton_click, bg=text_bg_color)
+setting_obutton.pack(pady=5)
+
+folder_path = ffmpeg_path
+if not os.path.exists(folder_path):
+    show_custom_messagebox()
+# 運行主循環
+root.mainloop()
