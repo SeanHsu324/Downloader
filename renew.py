@@ -2,7 +2,7 @@ import os
 import json
 import requests
 import customtkinter as ctk
-import sys
+
 
 """檢查 GitHub 上的更新版本並提示更新"""
 # 設定 GitHub 儲存庫資訊
@@ -15,11 +15,12 @@ if response.status_code == 200:
     data = response.json()
     latest_version = data["tag_name"]  # 取得最新版本號
     assets = data["assets"]  # 取得附件清單
+    release_notes = data.get("body", "沒有提供更新內容")
 else:
     print(f"無法取得 Release 資訊，錯誤碼: {response.status_code}")
 
 # 設定本地存放路徑
-local_folder = "."
+local_folder = "c:\\downloadsitt"
 json_path = os.path.join(local_folder, "renew.json")
 
 # 讀取本地版本資訊
@@ -30,37 +31,21 @@ else:
     local_data = {}  # 如果沒有 renew.json，假設為空字典
 
 local_version = local_data.get("版本")
+local_path = local_data.get("下載位置")
 
 main_root = None  # 用於儲存 main.py 的 root
 
 def set_main_root(root):
-    """設定 main.py 的 root，讓其他函式可以關閉它"""
     global main_root
     main_root = root
-
 # 記錄計時器 ID
 animation_id = None
 
 def work(renew_root):
     global main_root
     """執行更新並關閉主視窗"""
-    os.system("rerenew.exe")
-    print("rerenew.exe")
-
-    def start_animation():
-        global animation_id
-        animation_id = renew_root.after(100, start_animation)  # 記錄 ID
-        # 使用另一個執行緒來延遲關閉主視窗，避免阻塞 UI 線程
-        
-    def close_main_root():
-        if main_root:
-            if animation_id:  # 假設 animation_id 是計時器 ID
-                renew_root.after_cancel(animation_id) 
-            print("關閉主視窗")
-            renew_root.destroy()
-            main_root.destroy()
-            sys.exit()  # 強制關閉 Python 進程
-    close_main_root()
+    os.system(local_path + "\\rerenew.exe")
+    print(local_path + "\\rerenew.exe")
 
 
 def renew_root(first_open, root):
@@ -80,10 +65,15 @@ def renew_root(first_open, root):
 
         text_label = ctk.CTkLabel(
             renew_root, 
-            text=f"發現新版本\n目前般本:{local_version}\n新版本:{latest_version}\n是否更新？",
+            text=f"新版本:{latest_version}\n是否更新？",
             font=("Arial", 20, "bold")
         )
-        text_label.pack(pady=20)
+        text_label.pack(pady=10)
+
+        textbox = ctk.CTkTextbox(renew_root, height=60, font=("Arial", 14))
+        textbox.insert("1.0", f"更新內容\n{release_notes}")
+        textbox.configure(state="disabled")  # 設為唯讀
+        textbox.pack(pady=10, padx=20, fill="both", expand=False)
 
         btn_frame = ctk.CTkFrame(renew_root, fg_color="transparent")
         btn_frame.pack()
@@ -105,6 +95,8 @@ def renew_root(first_open, root):
         renew_root_button.pack(side="left", padx=5)
 
         renew_root.grab_set()
+
+settings_path = (local_path+"\\settings.json")
 
 def renew(first_open, root):
     first_open = 1

@@ -7,8 +7,26 @@ from threading import Thread
 from tkinter import END
 import sys
 import webbrowser
+import json
 
-cookie_txt_path = ".\\cookie.txt"
+main_view = None  # 用於儲存 main.py 的 root
+
+def set_main_view(root):
+    global main_view
+    main_view = root
+
+work_path = "c:\\downloadsitt"
+json_work_path = os.path.join(work_path, "renew.json")
+
+if os.path.exists(json_work_path):
+    with open(json_work_path, "r", encoding="utf-8") as f:
+        local_data = json.load(f)
+else:
+    local_data = {}  # 如果沒有 renew.json，假設為空字典
+
+down_path = local_data.get("下載位置")
+
+cookie_txt_path = f"{down_path}\\cookie.txt"
 
 if os.path.exists(cookie_txt_path):
     print("cookie.txt 存在")
@@ -73,7 +91,7 @@ def clean_ansi_codes(text):
 
 def format_eta(eta_seconds):
     if eta_seconds is None:
-        return "合併中..."
+        return "正在尋找..."
     hours, remainder = divmod(eta_seconds, 3600)
     minutes, seconds = divmod(remainder, 60)
     if hours > 0:
@@ -86,11 +104,25 @@ def format_eta(eta_seconds):
 download_folder = os.path.join(os.path.expanduser("~"), "Desktop", "youtube下載")# 設置保存下載視頻的根目錄到桌面的「youtube下載」文件夾中
 os.makedirs(download_folder, exist_ok=True)
 
+def show_error_message(e):
+    messagebox.showerror("錯誤", f"下載失敗: {str(e)}")
+
+def show_success_message(url_box ,format_choice):
+    url = url_box.get()
+    if 'list=' in url:
+        messagebox.showinfo("成功", "清單下載完成！")
+    else:
+        if format_choice == "mp3":
+            messagebox.showinfo("成功", "音檔下載完成！")
+        else:
+            messagebox.showinfo("成功", "影片下載完成！")
+
+
+
 def download_video(url, format_choice, progress_window, on_complete_callback, url_box, ffmpeg_path):
     try:
         global download_folder
-        
-        # 構建下載選項
+
         if format_choice == "mp3":
             ydl_opts = {
                 'format': 'bestaudio[ext=m4a]/m4a',
@@ -114,65 +146,57 @@ def download_video(url, format_choice, progress_window, on_complete_callback, ur
                 "cookies": cookie_txt_path
             }
 
-        # 開始下載
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             ydl.download([url])
 
-        # 根據格式顯示成功訊息
-        if format_choice == "mp3":
-            messagebox.showinfo("成功", "音檔下載完成！")
-        else:
-            messagebox.showinfo("成功", "影片下載完成！")
+        main_view.after(0, lambda: show_success_message(url_box, format_choice))
     except Exception as e:
-        # 異常處理
-        messagebox.showerror("錯誤", f"下載失敗: {str(e)}")
+        main_view.after(0, lambda: show_error_message(e))
     finally:
-        # 確保輸入框清空、窗口關閉和狀態重置
-        url_box.delete(0, END)
-        progress_window.destroy()
+        main_view.after(0, lambda: url_box.delete(0, END))
+        main_view.after(0, progress_window.destroy)
         on_complete_callback()
 
 
-def download_playlist(playlist_url, format_choice, progress_window, url_box, ffmpeg_path):
+
+def download_playlist(playlist_url, format_choice, progress_window, on_complete_callback, url_box, ffmpeg_path):
     try:
         global download_folder
 
-        # 設置下載選項
         if format_choice == "mp3":
             ydl_opts = {
-                'format': 'bestaudio[ext=m4a]/m4a',  # 下載最佳音頻質量
+                'format': 'bestaudio[ext=m4a]/m4a',
                 'outtmpl': os.path.join(download_folder, '%(playlist)s', '%(title)s.%(ext)s'),
                 'postprocessors': [{
                     'key': 'FFmpegExtractAudio',
                     'preferredcodec': 'mp3',
                     'preferredquality': '192',
                 }],
-                'ffmpeg_location': ffmpeg_path,  # 指定 FFmpeg 路徑
+                'ffmpeg_location': ffmpeg_path,
                 'progress_hooks': [progress_hook(progress_window)],
                 "cookies": cookie_txt_path,
             }
         else:
             ydl_opts = {
-                'format': 'bestvideo[ext=mp4]+bestaudio[ext=m4a]/mp4',  # 下載最佳品質的視頻和音頻
+                'format': 'bestvideo[ext=mp4]+bestaudio[ext=m4a]/mp4',
                 'outtmpl': os.path.join(download_folder, '%(playlist)s', '%(title)s.%(ext)s'),
                 'merge_output_format': 'mp4',
-                'ffmpeg_location': ffmpeg_path,  # 指定 FFmpeg 路徑
+                'ffmpeg_location': ffmpeg_path,
                 'progress_hooks': [progress_hook(progress_window)],
                 "cookies": cookie_txt_path
             }
 
-
-
-        # 下載清單中的所有影片
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             ydl.download([playlist_url])
 
-        messagebox.showinfo("成功", "清單下載完成！")
-        url_box.delete(0, END)  # 清空輸入框
-        progress_window.destroy()  # 下載完成後關閉窗口
+        main_view.after(0, lambda: show_success_message(url_box, format_choice))
     except Exception as e:
-        url_box.delete(0, END)# 清空輸入框
-        messagebox.showerror("錯誤", f"下載失敗: {str(e)}")
+        main_view.after(0, lambda: show_error_message(e))
+    finally:
+        main_view.after(0, lambda: url_box.delete(0, END))
+        main_view.after(0, progress_window.destroy)
+        on_complete_callback()
+
 
 def progress_hook(progress_window):
     def hook(d):
@@ -192,7 +216,7 @@ def progress_hook(progress_window):
         elif d['status'] == 'finished':
             progress_window.after(0, lambda: progress_window.set_progress(100))
             progress_window.after(0, lambda: progress_window.set_filename("下載完成"))
-            progress_window.after(0, lambda: progress_window.set_eta("不適用"))
+            progress_window.after(0, lambda: progress_window.set_eta("合併中..."))
     return hook
 
 is_downloading = False
