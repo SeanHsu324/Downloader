@@ -2,7 +2,7 @@ import customtkinter as ctk
 import os
 import sys
 from PIL import Image
-
+import colorsys
 
 def resource_path(relative_path):
     """取得資源的正確路徑（適用於開發和打包後的環境）"""
@@ -59,11 +59,10 @@ import tkinter as tk
 import webbrowser
 from tkinter import  colorchooser
 import json
-from module.download import on_download_button_click
+from module.download import on_download_button_click, set_main_view
 from module.word import browse_file, browse_folder, start_conversion
 from module.mp4_to_mp3 import mp3, convert_mp4_to_mp3
-from module.renew import set_main_root, renew, renew_root
-
+from module.renew import renew, renew_root, set_main_root
 # 追蹤所有執行中的執行緒
 threads = []
 
@@ -93,11 +92,23 @@ def on_closing():
 root.protocol("WM_DELETE_WINDOW", on_closing)
 
 set_main_root(root)
+set_main_view(root)
 renew_root(first_open, root)
+
+work_path = "c:\\downloadsitt"
+json_work_path = os.path.join(work_path, "renew.json")
+
+if os.path.exists(json_work_path):
+    with open(json_work_path, "r", encoding="utf-8") as f:
+        local_data = json.load(f)
+else:
+    local_data = {}  # 如果沒有 renew.json，假設為空字典
+
+down_path = local_data.get("下載位置")
 
 #ffmpeg_path = "C:/Users/PC/Desktop/ffmpeg/bin"
 #設定json
-sett_path = "."
+sett_path = down_path
 os.makedirs(sett_path, exist_ok=True)
 
 # 設定 JSON 檔案路徑
@@ -108,8 +119,11 @@ if os.path.exists(json_file_path):
     with open(json_file_path, "r") as file:
         settings = json.load(file)
         ctk.set_appearance_mode(settings["background_color"])
+        settings.setdefault("hover_color", "#47DB00")
+        with open(json_file_path, "w") as file:
+            json.dump(settings, file)
 else:
-    settings = {"background_color": "Dark","subject_color": "#80ff42", "text_color": "black","igusername": "", "igpassword": ""}
+    settings = {"background_color": "Dark", "subject_color": "#80ff42", "text_color": "black", "hover_color":"#47DB00", "igusername": "", "igpassword": ""}
     with open(json_file_path, "w") as file:
         json.dump(settings, file)
 
@@ -143,16 +157,24 @@ def choose_color():
         settings["subject_color"] = color_code  # 儲存選擇的顏色
         text_color = "black" if is_light_color(color_code) else "white"
         settings["text_color"] = text_color
+        hover_color = darken_color(settings["subject_color"], 20)
+        settings["hover_color"] = hover_color
         item = [
-            loadbutton, backbutton, dropdown_menu, yt_button, sett_button,
-            home_button, backgroundcolor_menu, changebutton, previous_button,
-            wordbutton, wordstart_button, wordbrowse_folder_button, 
-            wordbrowse_file_button, wordlabel,mp3label, mp3start_button, mp3browse_button,
-            mp4_to_mp3button
+            dropdown_menu, backgroundcolor_menu, wordlabel, mp3label
+        ]
+        botton = [
+            loadbutton, backbutton, sett_button, home_button, previous_button,
+            wordbutton, wordstart_button, changebutton, wordbrowse_folder_button, 
+            wordbrowse_file_button, mp3start_button, mp3browse_button,
+            mp4_to_mp3button, yt_button
+
         ]
         def update_color():
             for component in item:
                 component.configure(fg_color=color_code, text_color=text_color)
+            for com in botton:
+                com.configure(fg_color=color_code, text_color=text_color, hover_color=hover_color)
+            
 
         # 更新所有元件的顏色
         update_color()
@@ -165,24 +187,40 @@ def choose_color():
 def load():
     if settings["background_color"] == "Dark":
         backgroundcolor_menu.set("深色")
+        ctk.set_appearance_mode("Dark")
 
     elif settings["background_color"] == "Light":
         backgroundcolor_menu.set("淺色")
+        ctk.set_appearance_mode("Light")
 
     elif settings["background_color"] == "System":
         backgroundcolor_menu.set("自動")
+        ctk.set_appearance_mode("System")
 
-    components = [
-        loadbutton, backbutton, dropdown_menu, yt_button, sett_button, home_button,
-        backgroundcolor_menu, changebutton, wordbutton, wordstart_button,
-        wordbrowse_folder_button, wordbrowse_file_button, wordlabel, previous_button,
-        mp3label, mp3start_button, mp3browse_button, mp4_to_mp3button
+
+    items = [
+             dropdown_menu, backgroundcolor_menu, wordlabel, mp3label
+        ]
+    bottons = [
+        loadbutton, backbutton, sett_button, home_button, previous_button,
+        wordbutton, wordstart_button, changebutton, wordbrowse_folder_button, 
+        wordbrowse_file_button, mp3start_button, mp3browse_button,
+        mp4_to_mp3button, yt_button
     ]
-
     # 定義更新樣式的函式
     def update_component_styles():
-        for component in components:
+        for component in items:
             component.configure(fg_color=settings["subject_color"], text_color=settings["text_color"])
+        for com in bottons:
+            if settings.setdefault("hover_color", "#47DB00") == "#47DB00":
+                hover_color = darken_color(settings["subject_color"], 20)
+                settings["hover_color"] = hover_color
+                with open(json_file_path, "w") as file:
+                    json.dump(settings, file)
+
+                com.configure(fg_color=settings["subject_color"], text_color=settings["text_color"], hover_color=hover_color)
+            else:
+                com.configure(fg_color=settings["subject_color"], text_color=settings["text_color"], hover_color=settings["hover_color"])
 
     # 綁定右鍵菜單顯示事件
     root.bind("<Button-3>", show_fuontion_menu)
@@ -190,6 +228,30 @@ def load():
     # 更新樣式
     update_component_styles()
 
+def darken_color(color: str, percent: float):
+    """
+    將 HEX 色碼變暗一定比例（降低 HSL 亮度值）。
+    
+    :param color: 原始 HEX 色碼，例如 "#80FF42"
+    :param percent: 降低的百分比，例如 20 表示降低 20%
+    :return: 變暗後的 HEX 色碼
+    """
+    # 解析 HEX 顏色為 RGB（0-255）
+    color = color.lstrip("#")
+    r, g, b = int(color[0:2], 16), int(color[2:4], 16), int(color[4:6], 16)
+
+    # 轉換 RGB 到 HLS (HSL)
+    h, l, s = colorsys.rgb_to_hls(r / 255, g / 255, b / 255)
+
+    # 降低亮度 L
+    l = max(0, l - (percent / 100))  # 確保不低於 0
+
+    # 轉回 RGB
+    r, g, b = colorsys.hls_to_rgb(h, l, s)
+    r, g, b = int(r * 255), int(g * 255), int(b * 255)
+
+    # 回傳 HEX 色碼
+    return f"#{r:02X}{g:02X}{b:02X}"
 
 def is_light_color(hex_color):
     """
@@ -417,9 +479,10 @@ mp3browse_button = ctk.CTkButton(root, text="瀏覽", command=lambda:mp3(mp3labe
 
 if os.path.exists(json_file_path) == True :
     load()
+    print("load")
 else :
     ctk.set_appearance_mode("Dark")
-
+    print("ctk.set")
 
 
 first_open = 1
