@@ -125,7 +125,7 @@ def download_video(url, format_choice, progress_window, on_complete_callback, ur
 
         if format_choice == "mp3":
             ydl_opts = {
-                'format': 'bestaudio[ext=m4a]/m4a',
+                'format': '140',
                 'outtmpl': os.path.join(download_folder, '%(title)s.%(ext)s'),
                 'postprocessors': [{
                     'key': 'FFmpegExtractAudio',
@@ -134,16 +134,18 @@ def download_video(url, format_choice, progress_window, on_complete_callback, ur
                 }],
                 'ffmpeg_location': ffmpeg_path,
                 'progress_hooks': [progress_hook(progress_window)],
-                "cookies": cookie_txt_path
+                "cookies": cookie_txt_path,
+                'quiet': True
             }
         else:
             ydl_opts = {
-                'format': 'bestvideo[ext=mp4]+bestaudio[ext=m4a]/mp4',
+                'format': '137+140',
                 'outtmpl': os.path.join(download_folder, '%(title)s.%(ext)s'),
                 'merge_output_format': 'mp4',
                 'ffmpeg_location': ffmpeg_path,
                 'progress_hooks': [progress_hook(progress_window)],
-                "cookies": cookie_txt_path
+                "cookies": cookie_txt_path,
+                'quiet': True
             }
 
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
@@ -165,7 +167,7 @@ def download_playlist(playlist_url, format_choice, progress_window, on_complete_
 
         if format_choice == "mp3":
             ydl_opts = {
-                'format': 'bestaudio[ext=m4a]/m4a',
+                'format': '140',
                 'outtmpl': os.path.join(download_folder, '%(playlist)s', '%(title)s.%(ext)s'),
                 'postprocessors': [{
                     'key': 'FFmpegExtractAudio',
@@ -173,17 +175,19 @@ def download_playlist(playlist_url, format_choice, progress_window, on_complete_
                     'preferredquality': '192',
                 }],
                 'ffmpeg_location': ffmpeg_path,
-                'progress_hooks': [progress_hook(progress_window)],
+                'progress_hooks': [progress_hook(progress_window)], 
                 "cookies": cookie_txt_path,
+                'quiet': True
             }
         else:
             ydl_opts = {
-                'format': 'bestvideo[ext=mp4]+bestaudio[ext=m4a]/mp4',
+                'format': '137+140',
                 'outtmpl': os.path.join(download_folder, '%(playlist)s', '%(title)s.%(ext)s'),
                 'merge_output_format': 'mp4',
                 'ffmpeg_location': ffmpeg_path,
                 'progress_hooks': [progress_hook(progress_window)],
-                "cookies": cookie_txt_path
+                "cookies": cookie_txt_path,
+                'quiet': True
             }
 
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
