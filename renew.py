@@ -118,28 +118,44 @@ def renew(first_open, root):
     else:
         print("此 Release 沒有可下載的檔案！")
 
+
+
 def download_data(json_path):
+    repo_owner = "SeanHsu324"
     repo_name = "Setup"
     api_url = f"https://api.github.com/repos/{repo_owner}/{repo_name}/releases/latest"
     response = requests.get(api_url)
+
+    mp3_format = ""
+    mp4_format = ""
+
     if response.status_code == 200:
         data = response.json()
-        release_notes = data.get("body", "沒有內容")
+        release_notes = data.get("body", "")
+
+        try:
+            # 嘗試將 release_notes 當 JSON 處理
+            release_data = json.loads(release_notes)
+            mp3_format = release_data.get("mp3", "")
+            mp4_format = release_data.get("mp4", "")
+        except json.JSONDecodeError:
+            print("⚠️ Release Notes 不是合法 JSON，無法解析格式")
     else:
         print(f"無法取得 Release 資訊，錯誤碼: {response.status_code}")
 
-    sett_path = json_path
-    os.makedirs(sett_path, exist_ok=True)
-    
-    # 設定 JSON 檔案路徑
-    json_file_path = os.path.join(sett_path, "settings.json")
+    # 確保資料夾存在
+    os.makedirs(json_path, exist_ok=True)
+    json_file_path = os.path.join(json_path, "settings.json")
 
-    # 讀取現有的 JSON 設定，若沒有則創建預設設定
+    # 建立或更新 settings.json
     if os.path.exists(json_file_path):
         with open(json_file_path, "r") as file:
             settings = json.load(file)
-            settings["mp3"] = ""
-            settings["mp4"] = ""
-            with open(json_file_path, "w") as file:
-                json.dump(settings, file)
+    else:
+        settings = {}
 
+    settings["mp3"] = mp3_format
+    settings["mp4"] = mp4_format
+
+    with open(json_file_path, "w") as file:
+        json.dump(settings, file, ensure_ascii=False, indent=4)
