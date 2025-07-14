@@ -62,7 +62,7 @@ import json
 from module.download import on_download_button_click, set_main_view
 from module.word import browse_file, browse_folder, start_conversion
 from module.mp4_to_mp3 import mp3, convert_mp4_to_mp3
-from module.renew import renew, renew_root, set_main_root
+from module.renew import renew, renew_root, set_main_root, download_data
 # 追蹤所有執行中的執行緒
 threads = []
 
@@ -105,7 +105,7 @@ else:
     local_data = {}  # 如果沒有 renew.json，假設為空字典
 
 down_path = local_data.get("下載位置")
-
+download_data(down_path)
 #ffmpeg_path = "C:/Users/PC/Desktop/ffmpeg/bin"
 #設定json
 sett_path = down_path
