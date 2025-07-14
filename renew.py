@@ -127,16 +127,18 @@ def download_data(json_path):
         release_notes = data.get("body", "沒有提供更新內容")
     else:
         print(f"無法取得 Release 資訊，錯誤碼: {response.status_code}")
-    os.makedirs(sett_path, exist_ok=True)
 
+    sett_path = json_path
+    os.makedirs(sett_path, exist_ok=True)
+    
     # 設定 JSON 檔案路徑
     json_file_path = os.path.join(sett_path, "settings.json")
 
     # 讀取現有的 JSON 設定，若沒有則創建預設設定
-    if os.path.exists(json_path):
-        with open(json_path, "r") as file:
+    if os.path.exists(json_file_path):
+        with open(json_file_path, "r") as file:
             settings = json.load(file)
             
-            with open(json_path, "w") as file:
+            with open(json_file_path, "w") as file:
                 json.dump(settings, file)
 
