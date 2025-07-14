@@ -124,7 +124,7 @@ def download_data(json_path):
     response = requests.get(api_url)
     if response.status_code == 200:
         data = response.json()
-        release_notes = data.get("body", "沒有提供更新內容")
+        release_notes = data.get("body", "沒有內容")
     else:
         print(f"無法取得 Release 資訊，錯誤碼: {response.status_code}")
 
@@ -138,7 +138,8 @@ def download_data(json_path):
     if os.path.exists(json_file_path):
         with open(json_file_path, "r") as file:
             settings = json.load(file)
-            
+            settings["mp3"] = ""
+            settings["mp4"] = ""
             with open(json_file_path, "w") as file:
                 json.dump(settings, file)
 
