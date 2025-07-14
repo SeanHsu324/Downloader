@@ -118,4 +118,7 @@ def renew(first_open, root):
     else:
         print("此 Release 沒有可下載的檔案！")
 
+def download_data :
+    repo_name = "S"
+    api_url = f"https://api.github.com/repos/{repo_owner}/{repo_name}/releases/latest"
 
