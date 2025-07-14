@@ -119,6 +119,13 @@ def renew(first_open, root):
         print("此 Release 沒有可下載的檔案！")
 
 def download_data :
-    repo_name = "S"
+    repo_name = "Setup"
     api_url = f"https://api.github.com/repos/{repo_owner}/{repo_name}/releases/latest"
+    response = requests.get(api_url)
+    if response.status_code == 200:
+        data = response.json()
+        release_notes = data.get("body", "沒有提供更新內容")
+    else:
+        print(f"無法取得 Release 資訊，錯誤碼: {response.status_code}")
+    
 
