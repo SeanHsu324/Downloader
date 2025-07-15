@@ -120,51 +120,54 @@ def renew(first_open, root):
 
 
 
-def download_data(json_path):
+def download_data(first_open, json_path):
     if first_open != 1:
         first_open = 1
-        print(f"renew_root:{first_open}")
         return
     else:
-    repo_owner = "SeanHsu324"
-    repo_name = "Setup"
-    api_url = f"https://api.github.com/repos/{repo_owner}/{repo_name}/releases/latest"
-    response = requests.get(api_url)
+        repo_owner = "SeanHsu324"
+        repo_name = "Setup"
+        api_url = f"https://api.github.com/repos/{repo_owner}/{repo_name}/releases/latest"
+        response = requests.get(api_url)
 
-    mp3_format = ""
-    mp4_format = ""
+        mp3_format = ""
+        mp4_format = ""
 
-    if response.status_code == 200:
-        data = response.json()
-        release_notes = data.get("body", "")
+        if response.status_code == 200:
+            data = response.json()
+            release_notes = data.get("body", "")
 
-        try:
-            # 嘗試將 release_notes 當 JSON 處理
-            release_data = json.loads(release_notes)
-            mp3_format = release_data.get("mp3", "")
-            mp4_format = release_data.get("mp4", "")
-        except json.JSONDecodeError:
-            print("⚠️ Release Notes 不是合法 JSON，無法解析格式")
-    else:
-        print(f"無法取得 Release 資訊，錯誤碼: {response.status_code}")
+            try:
+                release_data = json.loads(release_notes)
+                mp3_format = release_data.get("mp3", "")
+                mp4_format = release_data.get("mp4", "")
+            except json.JSONDecodeError:
+                print("不是JSON的格式")
+        else:
+            print(f"無法取得 Release 資訊，錯誤碼: {response.status_code}")
 
-    # 確保資料夾存在
-    os.makedirs(json_path, exist_ok=True)
-    json_file_path = os.path.join(json_path, "settings.json")
+        # 確保資料夾存在
+        os.makedirs(json_path, exist_ok=True)
+        json_file_path = os.path.join(json_path, "settings.json")
 
-    # 建立或更新 settings.json
-    if os.path.exists(json_file_path):
-        with open(json_file_path, "r") as file:
-            settings = json.load(file)
-    else:
-        settings = {}
-    if settings["mp3"] ！= mp3_format ：
-        settings["mp3"] = mp3_format
-        with open(json_file_path, "w") as file:
-            json.dump(settings, file, ensure_ascii=False, indent=4)
+        # 建立或更新 settings.json
+        if os.path.exists(json_file_path):
+            with open(json_file_path, "r") as file:
+                settings = json.load(file)
+        else:
+            settings = {}
+        if settings["mp3"] != mp3_format :
+            if mp3_format == "ok" :
+                settings["mp3"] ="bestaudio[ext=m4a]/m4a"
+            else:
+                settings["mp3"] = mp3_format
+            with open(json_file_path, "w") as file:
+                json.dump(settings, file, ensure_ascii=False, indent=4)
 
-    if settings["mp4"] != mp4_format:
-        settings["mp4"] = mp4_format
-
-        with open(json_file_path, "w") as file:
-            json.dump(settings, file, ensure_ascii=False, indent=4)
+        if settings["mp4"] != mp4_format :
+            if mp4_format == "ok" :
+                settings["mp4"] ="bestvideo[ext=mp4]+bestaudio[ext=m4a]/mp4"
+            else:
+                settings["mp4"] = mp4_format
+            with open(json_file_path, "w") as file:
+                json.dump(settings, file, ensure_ascii=False, indent=4)

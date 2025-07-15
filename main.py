@@ -433,7 +433,7 @@ root.focus()
 dropdown_menu = ctk.CTkOptionMenu(root, values=["選擇格式", "mp4", "mp3"], width=200, height=40, font=("Arial", 20, "bold"))
 dropdown_menu.set("選擇格式")
 
-yt_button = ctk.CTkButton(root, text="開始下載", width=100, height=40, corner_radius=40, command=lambda:on_download_button_click(root, url_box, dropdown_menu, ffmpeg_path,first_open), font=("Arial", 20, "bold")) 
+yt_button = ctk.CTkButton(root, text="開始下載", width=100, height=40, corner_radius=40, command=lambda:on_download_button_click(root, url_box, dropdown_menu, ffmpeg_path, first_open, settings["mp3"], settings["mp4"]), font=("Arial", 20, "bold")) 
 
 home_button = ctk.CTkButton(root, text="home",corner_radius=10,width=40,height=40,command=backhomepag, font=("Arial", 20, "bold"))
 
@@ -487,7 +487,7 @@ else :
 
 first_open = 1
 
-download_data(down_path)
+download_data(first_open,down_path)
 renew(first_open, root)
 print("renew")
 # 關閉載入畫面，顯示主視窗

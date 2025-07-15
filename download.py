@@ -119,13 +119,13 @@ def show_success_message(url_box ,format_choice):
 
 
 
-def download_video(url, format_choice, progress_window, on_complete_callback, url_box, ffmpeg_path):
+def download_video(url, format_choice, progress_window, on_complete_callback, url_box, ffmpeg_path, mp3_format, mp4_format):
     try:
         global download_folder
 
         if format_choice == "mp3":
             ydl_opts = {
-                'format': str(mp3_format),
+                'format': f"{mp3_format}",
                 'outtmpl': os.path.join(download_folder, '%(title)s.%(ext)s'),
                 'postprocessors': [{
                     'key': 'FFmpegExtractAudio',
@@ -139,7 +139,7 @@ def download_video(url, format_choice, progress_window, on_complete_callback, ur
             }
         else:
             ydl_opts = {
-                'format': str(mp4_format),
+                'format': f"{mp4_format}",
                 'outtmpl': os.path.join(download_folder, '%(title)s.%(ext)s'),
                 'merge_output_format': 'mp4',
                 'ffmpeg_location': ffmpeg_path,
@@ -161,13 +161,13 @@ def download_video(url, format_choice, progress_window, on_complete_callback, ur
 
 
 
-def download_playlist(playlist_url, format_choice, progress_window, on_complete_callback, url_box, ffmpeg_path):
+def download_playlist(playlist_url, format_choice, progress_window, on_complete_callback, url_box, ffmpeg_path, mp3_format, mp4_format):
     try:
         global download_folder
 
         if format_choice == "mp3":
             ydl_opts = {
-                'format': '140',
+                'format': f"{mp3_format}",
                 'outtmpl': os.path.join(download_folder, '%(playlist)s', '%(title)s.%(ext)s'),
                 'postprocessors': [{
                     'key': 'FFmpegExtractAudio',
@@ -181,7 +181,7 @@ def download_playlist(playlist_url, format_choice, progress_window, on_complete_
             }
         else:
             ydl_opts = {
-                'format': '137+140',
+                'format': f"{mp4_format}",
                 'outtmpl': os.path.join(download_folder, '%(playlist)s', '%(title)s.%(ext)s'),
                 'merge_output_format': 'mp4',
                 'ffmpeg_location': ffmpeg_path,
@@ -225,7 +225,7 @@ def progress_hook(progress_window):
 
 is_downloading = False
 
-def on_download_button_click(cook, url_box, dropdown_menu, ffmpeg_path, first_open):
+def on_download_button_click(cook, url_box, dropdown_menu, ffmpeg_path, first_open, mp3_format, mp4_format):
     global is_downloading
     
     if first_open != 1:
@@ -264,9 +264,9 @@ def on_download_button_click(cook, url_box, dropdown_menu, ffmpeg_path, first_op
         
                 # 判斷是否為播放清單
             if 'list=' in url:
-                Thread(target=download_playlist, args=(url, format_choice, progress_window, on_complete_callback, url_box, ffmpeg_path)).start()
+                Thread(target=download_playlist, args=(url, format_choice, progress_window, on_complete_callback, url_box, ffmpeg_path, mp3_format, mp4_format)).start()
             else:
-                Thread(target=download_video, args=(url, format_choice, progress_window, on_complete_callback, url_box, ffmpeg_path)).start()
+                Thread(target=download_video, args=(url, format_choice, progress_window, on_complete_callback, url_box, ffmpeg_path, mp3_format, mp4_format)).start()
         else:
             messagebox.showwarning("警告", "請輸入有效的網址")
             url_box.delete(0, END)  # 清空輸入框
