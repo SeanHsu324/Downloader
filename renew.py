@@ -158,9 +158,13 @@ def download_data(json_path):
             settings = json.load(file)
     else:
         settings = {}
+    if settings["mp3"] ！= mp3_format ：
+        settings["mp3"] = mp3_format
+        with open(json_file_path, "w") as file:
+            json.dump(settings, file, ensure_ascii=False, indent=4)
 
-    settings["mp3"] = mp3_format
-    settings["mp4"] = mp4_format
+    if settings["mp4"] != mp4_format:
+        settings["mp4"] = mp4_format
 
-    with open(json_file_path, "w") as file:
-        json.dump(settings, file, ensure_ascii=False, indent=4)
+        with open(json_file_path, "w") as file:
+            json.dump(settings, file, ensure_ascii=False, indent=4)
