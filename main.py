@@ -105,8 +105,8 @@ else:
     local_data = {}  # 如果沒有 renew.json，假設為空字典
 
 down_path = local_data.get("下載位置")
-download_data(down_path)
-#ffmpeg_path = "C:/Users/PC/Desktop/ffmpeg/bin"
+
+
 #設定json
 sett_path = down_path
 os.makedirs(sett_path, exist_ok=True)
@@ -487,6 +487,7 @@ else :
 
 first_open = 1
 
+download_data(down_path)
 renew(first_open, root)
 print("renew")
 # 關閉載入畫面，顯示主視窗
