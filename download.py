@@ -125,7 +125,7 @@ def download_video(url, format_choice, progress_window, on_complete_callback, ur
 
         if format_choice == "mp3":
             ydl_opts = {
-                'format': '140',
+                'format': str(mp3_format),
                 'outtmpl': os.path.join(download_folder, '%(title)s.%(ext)s'),
                 'postprocessors': [{
                     'key': 'FFmpegExtractAudio',
@@ -139,7 +139,7 @@ def download_video(url, format_choice, progress_window, on_complete_callback, ur
             }
         else:
             ydl_opts = {
-                'format': '137+140',
+                'format': str(mp4_format),
                 'outtmpl': os.path.join(download_folder, '%(title)s.%(ext)s'),
                 'merge_output_format': 'mp4',
                 'ffmpeg_location': ffmpeg_path,
