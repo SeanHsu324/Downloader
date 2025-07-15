@@ -121,6 +121,11 @@ def renew(first_open, root):
 
 
 def download_data(json_path):
+    if first_open != 1:
+        first_open = 1
+        print(f"renew_root:{first_open}")
+        return
+    else:
     repo_owner = "SeanHsu324"
     repo_name = "Setup"
     api_url = f"https://api.github.com/repos/{repo_owner}/{repo_name}/releases/latest"
