@@ -123,7 +123,7 @@ if os.path.exists(json_file_path):
         with open(json_file_path, "w") as file:
             json.dump(settings, file)
 else:
-    settings = {"background_color": "Dark", "subject_color": "#80ff42", "text_color": "black", "hover_color":"#47DB00", "mp4": "", "mp3": ""}
+    settings = {"background_color": "Dark", "subject_color": "#80ff42", "text_color": "black", "hover_color":"#47DB00", "mp4": "bestvideo[ext=mp4]+bestaudio[ext=m4a]/mp4", "mp3": "bestaudio[ext=m4a]/m4a"}
     with open(json_file_path, "w") as file:
         json.dump(settings, file)
 
