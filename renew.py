@@ -156,20 +156,30 @@ def download_data(first_open, json_path):
                 settings = json.load(file)
         else:
             settings = {}
-        demp3 = "bestaudio[ext=m4a]/m4a"
-        demp4 = "bestvideo[ext=mp4]+bestaudio[ext=m4a]/mp4"
+
+        default_mp3 = "bestaudio[ext=m4a]/m4a"
+        default_mp4 = "bestvideo[ext=mp4]+bestaudio[ext=m4a]/mp4"
+
+        changed = False
+
         if settings["mp3"] != mp3_format :
-            if mp3_format == "ok" and sitting["mp3"] != demp3:
-                settings["mp3"] = demp3
+            if mp3_format == "ok" :
+                if settings["mp3"] != default_mp3 :
+                    settings["mp3"] = default_mp3
+                    changed = True
             else:
                 settings["mp3"] = mp3_format
-            with open(json_file_path, "w") as file:
-                json.dump(settings, file, ensure_ascii=False, indent=4)
-
+                changed = True
+           
         if settings["mp4"] != mp4_format :
-            if mp4_format == "ok" and sitting["mp4"] != demp4:
-                settings["mp4"] = demp4
+            if mp4_format == "ok" :
+                if settings["mp4"] != default_mp4 :
+                    settings["mp4"] = default_mp4
+                    changed = True
             else:
                 settings["mp4"] = mp4_format
+                changed = True
+
+        if changed:
             with open(json_file_path, "w") as file:
                 json.dump(settings, file, ensure_ascii=False, indent=4)
