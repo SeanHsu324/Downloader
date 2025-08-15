@@ -74,9 +74,6 @@ ffmpeg_path = resource_path("ffmpeg/bin/ffmpeg.exe")
 print(f"FFmpeg 路徑: {ffmpeg_path}")
 
 
-# 設定外觀模式（"System" 依系統主題，"Dark" 深色模式，"Light" 淺色模式）
-#ctk.set_appearance_mode("Dark")
-#ctk.set_default_color_theme("blue")
 settings = {}
 root = ctk.CTk()
 root.geometry("640x350")
