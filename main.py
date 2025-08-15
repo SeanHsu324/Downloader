@@ -139,7 +139,7 @@ def set_background_color(choice):
         ctk.set_appearance_mode("Light")
         settings["background_color"] = "Light"
         
-    elif choice == "自動":
+    elif choice == "系統":
         ctk.set_appearance_mode("System")
         settings["background_color"] = "System"
 
@@ -149,31 +149,31 @@ def set_background_color(choice):
 
 def set_Image_quality(choice):
     # 根據選擇更新mp4畫質
-    if choice == "最高":
+    if choice == "最高畫質":
         settings["mp4"] = "bestvideo[ext=mp4]+bestaudio[ext=m4a]/mp4"
 
     elif choice == "1080p":
-        settings["mp4"] = "bestvideo[height==1080]+bestaudio[ext=m4a]/mp4"
+        settings["mp4"] = "bestvideo[height=1080]+bestaudio[ext=m4a]/mp4"
         
     elif choice == "720p":
-        settings["mp4"] = "bestvideo[height==720]+bestaudio[ext=m4a]/mp4"
+        settings["mp4"] = "bestvideo[height=720]+bestaudio[ext=m4a]/mp4"
 
     elif choice == "480p":
-        settings["mp4"] = "bestvideo[height==480]+bestaudio[ext=m4a]/mp4"
+        settings["mp4"] = "bestvideo[height=480]+bestaudio[ext=m4a]/mp4"
 
     elif choice == "240p":
-        settings["mp4"] = "bestvideo[height==240]+bestaudio[ext=m4a]/mp4"
+        settings["mp4"] = "bestvideo[height=240]+bestaudio[ext=m4a]/mp4"
 
     elif choice == "144p":
-        settings["mp4"] = "bestvideo[height==144]+bestaudio[ext=m4a]/mp4"
+        settings["mp4"] = "bestvideo[height=144]+bestaudio[ext=m4a]/mp4"
 
     # 儲存到 JSON 檔案
     with open(json_file_path, "w") as file:
         json.dump(settings, file)
 
 def match_search(format_str):
-    match = search(r'height==(\d+)', format_str)
-    return match.group(1) + "p" if match else "最高"
+    match = search(r'height=(\d+)', format_str)
+    return match.group(1) + "p" if match else "最高畫質"
 
 def open_link(url):
     webbrowser.open(url)
@@ -221,7 +221,7 @@ def load():
         ctk.set_appearance_mode("Light")
 
     elif settings["background_color"] == "System":
-        backgroundcolor_menu.set("自動")
+        backgroundcolor_menu.set("系統")
         ctk.set_appearance_mode("System")
 
     Image_quality_menu.set(match_search(settings["mp4"]))
@@ -337,8 +337,9 @@ def ytdownload():
     url_box.focus_set()
     home_button.place(relx=0.05, rely=0.05)
     url_box.pack(pady=(50, 10))
-    dropdown_menu.pack(pady=(10, 20))
-    Image_quality_menu.pack(pady=(10, 20))
+    menu_frame.pack(pady=(20, 20))
+    dropdown_menu.pack(side="left", padx=10)
+    Image_quality_menu.pack(side="left", padx=10)
     yt_button.pack(pady=(20, 10))
     wordbutton.pack_forget()
     sett_button.place_forget()
@@ -360,6 +361,7 @@ def backhomepag():
     backbutton.pack(side="left", padx=20)
     sett_button.place(relx=0.9, rely=0.05)
     wordbutton.pack_forget()
+    menu_frame.pack_forget()
     dropdown_menu.pack_forget() 
     Image_quality_menu.pack_forget()
     home_button.place_forget()
@@ -458,11 +460,12 @@ backbutton.pack(side="left", padx=20)
 url_box = ctk.CTkEntry(root, placeholder_text="輸入網址", width=300, height=50, fg_color="transparent", font=("Arial", 20, "bold"))
 root.focus()
 
-dropdown_menu = ctk.CTkOptionMenu(root, values=["選擇格式", "mp4", "mp3"], width=200, height=40, font=("Arial", 20, "bold"))
+menu_frame = ctk.CTkFrame(root, fg_color="transparent")
+
+dropdown_menu = ctk.CTkOptionMenu(menu_frame, values=["選擇格式", "mp4", "mp3"], width=200, height=40, font=("Arial", 20, "bold"))
 dropdown_menu.set("選擇格式")
 
-Image_quality_menu = ctk.CTkOptionMenu(root, values=["最高","1080p", "720p", "480p","240p","144p"], command=set_Image_quality, width=200, height=40, font=("Arial", 20, "bold"))
-Image_quality_menu.set("最高")
+Image_quality_menu = ctk.CTkOptionMenu(menu_frame, values=["最高畫質", "1080p", "720p", "480p", "240p", "144p"], command=set_Image_quality, width=200, height=40, font=("Arial", 20, "bold"))
 
 yt_button = ctk.CTkButton(root, text="開始下載", width=100, height=40, corner_radius=40, command=lambda:on_download_button_click(root, url_box, dropdown_menu, ffmpeg_path, first_open, settings["mp3"], settings["mp4"]), font=("Arial", 20, "bold")) 
 
@@ -473,9 +476,11 @@ home_button = ctk.CTkButton(root, text="home", corner_radius=10, width=40, heigh
 sett_button = ctk.CTkButton(root, text="=", corner_radius=10, width=40, height=40, command=setepag, font=("Arial", 20, "bold"))
 sett_button.place(relx=0.9, rely=0.05)
 
-backgroundcolor_menu = ctk.CTkOptionMenu(root, values=["自動", "深色", "淺色"], width=200, height=40, command=set_background_color, font=("Arial", 20, "bold"))
+backgroundcolor_menu = ctk.CTkOptionMenu(root, values=["系統", "深色", "淺色"], width=200, height=40, command=set_background_color, font=("Arial", 20, "bold"))
 
 changebutton = ctk.CTkButton(root, text="選擇顏色", command=choose_color, width=200, height=40, font=("Arial", 20, "bold"))
+
+
 
 '''功能頁'''
 
