@@ -33,7 +33,7 @@
 
 ## 安裝方式
 
-### Windows
+### Windows(推薦)
 
 1. 到<https://sites.google.com/view/yt-to-dowload>或<https://github.com/SeanHsu324/Setup>下載DownloaderSetup.exe
 2. 解壓縮到任意資料夾
