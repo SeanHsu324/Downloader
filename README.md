@@ -136,3 +136,7 @@ is_light_color("#80ff42")   #(色號)
 ---
 ## 開發與貢獻
 [SeanHsu324](https://github.com/SeanHsu324)
+---
+## 授權
+
+
