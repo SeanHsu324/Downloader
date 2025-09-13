@@ -64,6 +64,7 @@ type nul > cookie.txt
 New-Item cookie.txt -ItemType File -Force
 ```
 ### 下載FFmpeg
+和main.py放在同一個資料夾
 > <https://github.com/SeanHsu324/FFmpeg/releases/download/v1.00/ffmpeg.rar>
 ### 在C:\建立downloadsitt資料夾
 再建立renew.json
