@@ -46,7 +46,7 @@ git clone https://github.com/SeanHsu324/Downloader.git
 cd Downloader
 pip install -r requirements.txt
 ```
-## 在Downloader中建立空白 cookie.txt
+### 在Downloader中建立空白 cookie.txt
 
 在專案目錄下執行以下指令即可建立一個空白檔案：
 
@@ -63,7 +63,9 @@ type nul > cookie.txt
 # Windows (PowerShell)
 New-Item cookie.txt -ItemType File -Force
 ```
-## 在C:\建立downloadsitt資料夾
+### 下載FFmpeg
+> <https://github.com/SeanHsu324/FFmpeg/releases/download/v1.00/ffmpeg.rar>
+### 在C:\建立downloadsitt資料夾
 再建立renew.json
 ```bash
 {
@@ -74,7 +76,7 @@ New-Item cookie.txt -ItemType File -Force
 ```
 ---
 ## 使用方法
- 請到<https://sites.google.com/view/yt-to-dowload/%E6%95%99%E5%AD%B8>
+> <https://sites.google.com/view/yt-to-dowload/%E6%95%99%E5%AD%B8>
  
 ---
 
