@@ -120,11 +120,11 @@ if os.path.exists(json_file_path):
     with open(json_file_path, "r") as file:
         settings = json.load(file)
         ctk.set_appearance_mode(settings["background_color"])
-        settings.setdefault("hover_color", "#47DB00")
+        settings["mp3"] = "bestaudio/m4a"
         with open(json_file_path, "w") as file:
             json.dump(settings, file)
 else:
-    settings = {"background_color": "Dark", "subject_color": "#80ff42", "text_color": "black", "hover_color":"#47DB00", "mp4": "bestvideo[ext=mp4]+bestaudio[ext=m4a]/mp4", "mp3": "bestaudio[ext=m4a]/m4a"}
+    settings = {"background_color": "Dark", "subject_color": "#80ff42", "text_color": "black", "hover_color":"#47DB00", "mp4": "bestvideo[ext=mp4]+bestaudio[ext=m4a]/mp4", "mp3": "bestaudio/m4a"}
     with open(json_file_path, "w") as file:
         json.dump(settings, file)
 
@@ -170,6 +170,16 @@ def set_Image_quality(choice):
     # 儲存到 JSON 檔案
     with open(json_file_path, "w") as file:
         json.dump(settings, file)
+
+def on_format_change(choice):
+    if choice in ["選擇格式", "mp3"]:
+        Image_quality_menu.configure(state="disabled")
+        if choice == "選擇格式":
+            yt_button.configure(state="disabled")
+    else:
+        Image_quality_menu.configure(state="normal")
+        yt_button.configure(state="normal")
+
 
 def match_search(format_str):
     match = search(r'height=(\d+)', format_str)
@@ -472,12 +482,14 @@ root.focus()
 
 menu_frame = ctk.CTkFrame(root, fg_color="transparent")
 
-dropdown_menu = ctk.CTkOptionMenu(menu_frame, values=["選擇格式", "mp4", "mp3"], width=200, height=40, font=("Arial", 20, "bold"))
+dropdown_menu = ctk.CTkOptionMenu(menu_frame, values=["選擇格式", "mp4", "mp3"], command=on_format_change, width=200, height=40, font=("Arial", 20, "bold"))
 dropdown_menu.set("選擇格式")
 
 Image_quality_menu = ctk.CTkOptionMenu(menu_frame, values=["最高畫質", "1080p", "720p", "480p", "240p", "144p"], command=set_Image_quality, width=200, height=40, font=("Arial", 20, "bold"))
+Image_quality_menu.configure(state="disabled")
 
 yt_button = ctk.CTkButton(root, text="開始下載", width=100, height=40, corner_radius=40, command=lambda:on_download_button_click(root, url_box, dropdown_menu, ffmpeg_path, first_open, settings["mp3"], settings["mp4"]), font=("Arial", 20, "bold")) 
+yt_button.configure(state="disabled")
 
 home_button = ctk.CTkButton(root, text="home", corner_radius=10, width=40, height=40, command=backhomepag, font=("Arial", 20, "bold"))
 
