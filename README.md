@@ -137,6 +137,7 @@ def is_light_color(hex_color):
 ```bash
 is_light_color("#80ff42")   #(色號)
 ```
+![展示2](assets/文字變色.gif)
 ---
 ## 開發與貢獻
 [SeanHsu324](https://github.com/SeanHsu324)
