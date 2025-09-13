@@ -1,0 +1,5 @@
+
+
+pyinstaller --onefile --windowed --icon=C:\Users\User\Desktop\yt\picture\yt.ico --add-data "C:\Users\User\Desktop\yt\module;module" --add-data "C:\Users\User\Desktop\yt\ffmpeg;ffmpeg" --add-data "C:\Users\User\Desktop\yt\picture;picture" --hidden-import pdf2docx --hidden-import docx2pdf C:\Users\User\Desktop\yt\main.py
+
+pyinstaller --onefile --windowed --icon=C:\Users\User\Desktop\yt\pt\ytd.ico --add-data "C:\Users\User\Desktop\yt\pt;pt" --hidden-import=psutil C:\Users\User\Desktop\yt\rerenew.py
