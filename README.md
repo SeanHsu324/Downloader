@@ -46,7 +46,7 @@ git clone https://github.com/SeanHsu324/Downloader.git
 cd Downloader
 pip install -r requirements.txt
 ```
-### 在Downloader中建立空白 cookie.txt
+### 建立空白的cookie.txt(和main.py放在同一個資料夾)
 
 在專案目錄下執行以下指令即可建立一個空白檔案：
 
