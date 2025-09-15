@@ -44,7 +44,11 @@
 ```bash
 git clone https://github.com/SeanHsu324/Downloader.git
 cd Downloader
+pip install --upgrade pip
 pip install -r requirements.txt
+
+#或
+python -m pip install -r requirements.txt
 ```
 ### 建立空白的cookie.txt(和main.py放在同一個資料夾)
 
