@@ -44,6 +44,15 @@
 ```bash
 git clone https://github.com/SeanHsu324/Downloader.git
 cd Downloader
+#建立環境
+python -m venv venv
+
+#同意執行環境
+Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
+
+#進入環境
+.\venv\Scripts\Activate
+
 pip install --upgrade pip
 pip install -r requirements.txt
 
