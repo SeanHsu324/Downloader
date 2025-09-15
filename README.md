@@ -80,11 +80,11 @@ New-Item cookie.txt -ItemType File -Force
 和main.py放在同一個資料夾
 > <https://github.com/SeanHsu324/FFmpeg/releases/download/v1.00/ffmpeg.rar>
 ### 在C:\建立downloadsitt資料夾
-再建立renew.json
+再建立renew.json(因為沒有可能會報錯但不太需要，因為無法自動更新)
 ```bash
 {
     "檔案名稱": "Downloader.exe",
-    "版本": "v1.0.8",
+    "版本": "(自己改成最新版本)",
     "下載位置": "(main.py在的資料夾)"
 }
 ```
