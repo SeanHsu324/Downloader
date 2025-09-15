@@ -86,6 +86,8 @@ New-Item cookie.txt -ItemType File -Force
 ### 將 HEX 色碼變暗一定比例
 可以做碰到按鈕顏色變深
 ```bash
+import colorsys
+
 def darken_color(color: str, percent: float):
     """
     將 HEX 色碼變暗一定比例（降低 HSL 亮度值）。
@@ -114,6 +116,8 @@ def darken_color(color: str, percent: float):
 ---
 這樣使用:
 ```bash
+import colorsys
+
 darken_color("#80ff42", 20)   #(色號, 變深的百分比)
 ```
 ![展示](assets/變深.gif)
