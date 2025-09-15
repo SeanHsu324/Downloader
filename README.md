@@ -53,6 +53,8 @@ Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
 #進入環境
 .\venv\Scripts\Activate
 
+#安裝打包模組
+pip install pyinstaller
 pip install --upgrade pip
 pip install -r requirements.txt
 
