@@ -121,10 +121,11 @@ if os.path.exists(json_file_path):
         settings = json.load(file)
         ctk.set_appearance_mode(settings["background_color"])
         settings["mp3"] = "bestaudio/m4a"
+        settings["mp4"] = "bestvideo[ext=mp4]+bestaudio/ mp4"
         with open(json_file_path, "w") as file:
             json.dump(settings, file)
 else:
-    settings = {"background_color": "Dark", "subject_color": "#80ff42", "text_color": "black", "hover_color":"#47DB00", "mp4": "bestvideo[ext=mp4]+bestaudio[ext=m4a]/mp4", "mp3": "bestaudio/m4a"}
+    settings = {"background_color": "Dark", "subject_color": "#80ff42", "text_color": "black", "hover_color":"#47DB00", "mp4": "bestvideo[ext=mp4]+bestaudio/mp4", "mp3": "bestaudio/m4a"}
     with open(json_file_path, "w") as file:
         json.dump(settings, file)
 
@@ -150,22 +151,22 @@ def set_background_color(choice):
 def set_Image_quality(choice):
     # 根據選擇更新mp4畫質
     if choice == "最高畫質":
-        settings["mp4"] = "bestvideo[ext=mp4]+bestaudio[ext=m4a]/mp4"
+        settings["mp4"] = "bestvideo[ext=mp4]+bestaudio/mp4"
 
     elif choice == "1080p":
-        settings["mp4"] = "bestvideo[height=1080]+bestaudio[ext=m4a]/mp4"
+        settings["mp4"] = "bestvideo[height=1080]+bestaudio/mp4"
         
     elif choice == "720p":
-        settings["mp4"] = "bestvideo[height=720]+bestaudio[ext=m4a]/mp4"
+        settings["mp4"] = "bestvideo[height=720]+bestaudio/mp4"
 
     elif choice == "480p":
-        settings["mp4"] = "bestvideo[height=480]+bestaudio[ext=m4a]/mp4"
+        settings["mp4"] = "bestvideo[height=480]+bestaudio/mp4"
 
     elif choice == "240p":
-        settings["mp4"] = "bestvideo[height=240]+bestaudio[ext=m4a]/mp4"
+        settings["mp4"] = "bestvideo[height=240]+bestaudio/mp4"
 
     elif choice == "144p":
-        settings["mp4"] = "bestvideo[height=144]+bestaudio[ext=m4a]/mp4"
+        settings["mp4"] = "bestvideo[height=144]+bestaudio/mp4"
 
     # 儲存到 JSON 檔案
     with open(json_file_path, "w") as file:
