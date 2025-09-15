@@ -116,8 +116,6 @@ def darken_color(color: str, percent: float):
 ---
 這樣使用:
 ```bash
-import colorsys
-
 darken_color("#80ff42", 20)   #(色號, 變深的百分比)
 ```
 ![展示](assets/變深.gif)
@@ -127,6 +125,8 @@ darken_color("#80ff42", 20)   #(色號, 變深的百分比)
 ### 判斷是否為淺色
 可以判斷被景色讓文字變白或黑
 ```bash
+import colorsys
+
 def is_light_color(hex_color):
     """
     根據顏色的亮度判斷是否為淺色。
