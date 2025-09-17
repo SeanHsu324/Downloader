@@ -57,7 +57,7 @@ splash.update()
 """開始載入主程式"""
 import tkinter as tk
 import webbrowser
-from tkinter import  colorchooser
+from tkinter import  colorchooser, filedialog
 import json
 from re import search
 from module.download import on_download_button_click, set_main_view
@@ -73,6 +73,9 @@ first_open  = 0
 ffmpeg_path = resource_path("ffmpeg/bin/ffmpeg.exe")
 print(f"FFmpeg 路徑: {ffmpeg_path}")
 
+# 預設資料夾（桌面\youtube下載）
+download_folder = os.path.join(os.path.expanduser("~"), "Desktop", "youtube下載")
+os.makedirs(download_folder, exist_ok=True)
 
 # 設定外觀模式（"System" 依系統主題，"Dark" 深色模式，"Light" 淺色模式）
 #ctk.set_appearance_mode("Dark")
@@ -120,12 +123,13 @@ if os.path.exists(json_file_path):
     with open(json_file_path, "r") as file:
         settings = json.load(file)
         ctk.set_appearance_mode(settings["background_color"])
-        settings["mp3"] = "bestaudio/m4a"
-        settings["mp4"] = "bestvideo[ext=mp4]+bestaudio/ mp4"
-        with open(json_file_path, "w") as file:
-            json.dump(settings, file)
+        if "download_folder" not in settings:
+            settings["download_folder"] = download_folder
+
+            with open(json_file_path, "w") as file:
+                json.dump(settings, file)
 else:
-    settings = {"background_color": "Dark", "subject_color": "#478058", "text_color": "black", "hover_color":"#223E2A", "mp4": "bestvideo[ext=mp4]+bestaudio/mp4", "mp3": "bestaudio/m4a"}
+    settings = {"background_color": "Dark", "subject_color": "#478058", "text_color": "black", "hover_color":"#223E2A", "mp4": "bestvideo[ext=mp4]+bestaudio/mp4", "mp3": "bestaudio/m4a", "download_folder": download_folder}
     with open(json_file_path, "w") as file:
         json.dump(settings, file)
 
@@ -173,12 +177,16 @@ def set_Image_quality(choice):
         json.dump(settings, file)
 
 def on_format_change(choice):
+    # 控制 Image_quality_menu
     if choice in ["選擇格式", "mp3"]:
         Image_quality_menu.configure(state="disabled")
-        if choice == "選擇格式":
-            yt_button.configure(state="disabled")
     else:
         Image_quality_menu.configure(state="normal")
+
+    # 控制 yt_button
+    if choice == "選擇格式":
+        yt_button.configure(state="disabled")
+    else:
         yt_button.configure(state="normal")
 
 
@@ -202,7 +210,7 @@ def choose_color():
         ]
         botton = [
             loadbutton, backbutton, sett_button, home_button, previous_button,
-            wordbutton, wordstart_button, changebutton, wordbrowse_folder_button, 
+            wordbutton, wordstart_button, changebutton, change_download_folder, wordbrowse_folder_button, 
             wordbrowse_file_button, mp3start_button, mp3browse_button,
             mp4_to_mp3button, yt_button
 
@@ -242,7 +250,7 @@ def load():
         ]
     bottons = [
         loadbutton, backbutton, sett_button, home_button, previous_button,
-        wordbutton, wordstart_button, changebutton, wordbrowse_folder_button, 
+        wordbutton, wordstart_button, changebutton, change_download_folder, wordbrowse_folder_button, 
         wordbrowse_file_button, mp3start_button, mp3browse_button,
         mp4_to_mp3button, yt_button
     ]
@@ -346,9 +354,25 @@ fuontionmenu = tk.Menu(root, tearoff=0)
 fuontionmenu.add_command(label="官網教學", command=teaching)
 fuontionmenu.add_command(label="設置Cookies教學", command=teaching_2)   
 
-
 def show_fuontion_menu(event):
     fuontionmenu.post(event.x_root, event.y_root)  # 在滑鼠點擊位置顯示菜單
+
+def select_download_folder():
+    global download_folder
+    folder = filedialog.askdirectory(
+        title="選擇下載位置", 
+        initialdir=download_folder
+    )
+    if folder:  # 使用者有選擇
+        download_folder = folder
+    else:       # 沒選就維持原本
+        download_folder = download_folder
+
+    os.makedirs(download_folder, exist_ok=True)
+    settings["download_folder"] = download_folder
+    with open(json_file_path, "w") as file:
+            json.dump(settings, file)
+    
     
 # 切換到下載頁面
 def ytdownload():
@@ -370,6 +394,7 @@ def ytdownload():
     button_frame.pack_forget()
     backgroundcolor_menu.pack_forget()
     changebutton.pack_forget()
+    change_download_folder.pack_forget()
 
 # 返回主頁
 def backhomepag():
@@ -390,6 +415,7 @@ def backhomepag():
     yt_button.pack_forget()
     backgroundcolor_menu.pack_forget()
     changebutton.pack_forget()
+    change_download_folder.pack_forget()
     function_frame.pack_forget()
     
 #設定
@@ -410,6 +436,7 @@ def setepag():
     home_button.place(relx=0.05, rely=0.05)
     backgroundcolor_menu.pack(pady=(50, 20))
     changebutton.pack(pady=(10, 20))
+    change_download_folder.pack(pady=(10, 20))
 
 #功能頁
 def function():
@@ -422,6 +449,7 @@ def function():
     button_frame.pack_forget()
     backgroundcolor_menu.pack_forget()
     changebutton.pack_forget()
+    change_download_folder.pack_forget()
     function_frame.pack(expand=True)
     wordbutton.pack(side="left",padx=20)
     mp4_to_mp3button.pack(side="left",padx=20)
@@ -489,7 +517,7 @@ dropdown_menu.set("選擇格式")
 Image_quality_menu = ctk.CTkOptionMenu(menu_frame, values=["最高畫質", "1080p", "720p", "480p", "240p", "144p"], command=set_Image_quality, width=200, height=40, font=("Arial", 20, "bold"))
 Image_quality_menu.configure(state="disabled")
 
-yt_button = ctk.CTkButton(root, text="開始下載", width=100, height=40, corner_radius=40, command=lambda:on_download_button_click(root, url_box, dropdown_menu, ffmpeg_path, first_open, settings["mp3"], settings["mp4"]), font=("Arial", 20, "bold")) 
+yt_button = ctk.CTkButton(root, text="開始下載", width=100, height=40, corner_radius=40, command=lambda:on_download_button_click(root, url_box, dropdown_menu, ffmpeg_path, first_open, settings["mp3"], settings["mp4"], settings["download_folder"]), font=("Arial", 20, "bold")) 
 yt_button.configure(state="disabled")
 
 home_button = ctk.CTkButton(root, text="home", corner_radius=10, width=40, height=40, command=backhomepag, font=("Arial", 20, "bold"))
@@ -503,6 +531,7 @@ backgroundcolor_menu = ctk.CTkOptionMenu(root, values=["系統", "深色", "淺�
 
 changebutton = ctk.CTkButton(root, text="選擇顏色", command=choose_color, width=200, height=40, font=("Arial", 20, "bold"))
 
+change_download_folder = ctk.CTkButton(root, text="選擇下載位置", command=select_download_folder, width=200, height=40, font=("Arial", 20, "bold"))
 
 
 '''功能頁'''
