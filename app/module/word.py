@@ -96,13 +96,12 @@ def start_conversion(wordlabel, wordstart_button, first_open):
             messagebox.showerror("錯誤", "請先選擇檔案！")
             return
         if file_path.endswith(".pdf"):
-    out_file = os.path.dirname(file_path)
-    threading.Thread(target=lambda: pdf_to_word(file_path, out_file, wordstart_button), daemon=True).start()
-    wordlabel.configure(text="轉換中")
+            out_file = os.path.dirname(file_path)
+            threading.Thread(target=lambda: pdf_to_word(file_path, out_file, wordstart_button), daemon=True).start()
+            wordlabel.configure(text="轉換中")
         elif file_path.endswith(".docx"):
-    out_file = os.path.dirname(file_path)
-    threading.Thread(target=lambda: word_to_pdf(file_path, out_file, wordstart_button), daemon=True).start()
-    wordlabel.configure(text="轉換中")
+            out_file = os.path.dirname(file_path)
+            threading.Thread(target=lambda: word_to_pdf(file_path, out_file, wordstart_button), daemon=True).start()
+            wordlabel.configure(text="轉換中")
         else:
-
             messagebox.showerror("錯誤", "不支援的檔案類型！")
