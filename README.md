@@ -91,9 +91,11 @@ New-Item cookie.txt -ItemType File -Force
 }
 ```
 ---
-## 使用方法
+---
+## 軟體教學和使用方法
 > <https://sites.google.com/view/yt-to-dowload/%E6%95%99%E5%AD%B8>
  
+---
 ---
 
 ## 程式碼分享
