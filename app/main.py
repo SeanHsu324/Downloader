@@ -32,13 +32,12 @@ return_black_path = resource_path("picture/return_black.png")
 notify_white_path = resource_path("picture/notify_white.png")
 notify_black_path = resource_path("picture/notify_black.png")
 
-# --- 核心修改：啟動畫面函式 ---
+# --- 啟動畫面函式 ---
 def splash_screen(main_root):
     """載入畫面，依附於主視窗"""
     splash = ctk.CTkToplevel(main_root)
     splash.overrideredirect(True)
-
-    # 載入圖片並保持參考，防止被垃圾回收
+
     try:
         img = Image.open(picture_path)
         img = img.resize((432, 102))
@@ -47,7 +46,7 @@ def splash_screen(main_root):
         print(f"無法載入啟動畫面圖片: {e}")
         splash.splash_img_ref = None
 
-    # 設定視窗大小與位置
+    
     win_width, win_height = 432, 102
     screen_width = splash.winfo_screenwidth()
     screen_height = splash.winfo_screenheight()
@@ -55,7 +54,7 @@ def splash_screen(main_root):
     y = (screen_height - win_height) // 2
     splash.geometry(f"{win_width}x{win_height}+{x}+{y}")
 
-    # 顯示圖片
+    
     if splash.splash_img_ref:
         label = ctk.CTkLabel(splash, image=splash.splash_img_ref, text="")
         label.pack()
@@ -68,11 +67,8 @@ def splash_screen(main_root):
     # 停留 5 秒後執行
     splash.after(5000, show_main_window)
     return splash
-
-# --- 核心修改：應用程式初始化流程 ---
-# 1. 建立整個應用程式唯一的根視窗
-root = ctk.CTk()
-# 2. 立即隱藏主視窗，直到啟動畫面結束
+
+root = ctk.CTk()
 root.withdraw()
 
 # --- 主視窗設定 ---
@@ -81,10 +77,10 @@ root.resizable(False, False)
 root.title("Downloader")
 root.iconbitmap(ico_path)
 
-# 3. 啟動載入畫面，傳入唯一的 root
+
 splash = splash_screen(root)
 
-# --- 開始載入主程式其餘部分 ---
+# --- 開始載入主程式 ---
 threads = []
 first_open = 0
 
@@ -134,8 +130,7 @@ else:
     settings = {"background_color": "Dark", "subject_color": "#478058", "text_color": "black", "hover_color":"#223E2A", "mp4": "bestvideo[ext=mp4]+bestaudio/mp4", "mp3": "bestaudio/m4a", "download_folder": download_folder}
     with open(json_file_path, "w") as file:
         json.dump(settings, file)
-
-# --- 函式定義 (保持不變) ---
+
 def set_background_color(choice):
     if choice == "深色": ctk.set_appearance_mode("Dark"); settings["background_color"] = "Dark"
     elif choice == "淺色": ctk.set_appearance_mode("Light"); settings["background_color"] = "Light"
@@ -415,8 +410,7 @@ menu.add_command(label="如何取得網址", command=teaching_3)
 fuontionmenu = tk.Menu(root, tearoff=0)
 fuontionmenu.add_command(label="官網教學", command=teaching)
 fuontionmenu.add_command(label="設置Cookies教學", command=teaching_2)
-
-# --- 程式啟動後載入設定 ---
+
 if os.path.exists(json_file_path):
     load()
     print("load")
@@ -428,5 +422,5 @@ first_open = 1
 renew(first_open, root)
 print("renew")
 
-# --- 啟動主事件循環 ---
+
 root.mainloop()
