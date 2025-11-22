@@ -87,7 +87,7 @@ New-Item cookie.txt -ItemType File -Force
 {
     "檔案名稱": "Downloader.exe",
     "版本": "(自己改成最新版本)",
-    "下載位置": "(main.py在的資料夾)"
+    "下載位置": "(main.py在的資料夾路徑)"
 }
 ```
 ---
