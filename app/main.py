@@ -12,6 +12,7 @@ from module.download import on_download_button_click, set_main_view
 from module.word import browse_file, browse_folder, start_conversion
 from module.mp4_to_mp3 import mp3, convert_mp4_to_mp3
 from module.renew import renew, renew_root, set_main_root
+import threading 
 
 def resource_path(relative_path):
     """取得資源的正確路徑（適用於開發和打包後的環境）"""
@@ -135,8 +136,17 @@ else:
         json.dump(settings, file)
 
 
+# --- 函式定義 (修復 GIL 錯誤) ---
 
-# --- 函式定義 (保持不變) ---
+def open_link_in_thread(url):
+    """
+    在一個獨立的執行緒中安全地開啟連結。
+    這可以避免 webbrowser 模組在主 Tkinter 執行緒中呼叫底層 OS API 
+    時可能發生的 GIL 衝突。
+    """
+    threading.Thread(target=lambda: webbrowser.open(url), daemon=True).start()
+
+
 def set_background_color(choice):
     if choice == "深色": ctk.set_appearance_mode("Dark"); settings["background_color"] = "Dark"
     elif choice == "淺色": ctk.set_appearance_mode("Light"); settings["background_color"] = "Light"
@@ -157,7 +167,8 @@ def match_search(format_str):
     match = search(r'height=(\d+)', format_str)
     return match.group(1) + "p" if match else "最高畫質"
 
-def open_link(url): webbrowser.open(url)
+def open_link(url): 
+    open_link_in_thread(url) 
 
 def is_light_color(hex_color):
     hex_color = hex_color.lstrip('#')
@@ -215,11 +226,18 @@ def select_all():
     url_box.icursor(tk.END)
 
 def show_context_menu(event): menu.post(event.x_root, event.y_root)
-def teaching(): webbrowser.open("https://sites.google.com/view/yt-to-dowload/教學" )
+
+
+def teaching(): 
+    open_link_in_thread("https://sites.google.com/view/yt-to-dowload/教學")
+
 def teaching_2():
-    webbrowser.open("https://sites.google.com/view/yt-to-dowload/教學/設置cookies" )
+    open_link_in_thread("https://sites.google.com/view/yt-to-dowload/教學/設置cookies")
     if down_path: os.startfile(os.path.join(down_path, "cookie.txt"))
-def teaching_3(): webbrowser.open("https://sites.google.com/view/yt-to-dowload/教學/取得網址" )
+
+def teaching_3(): 
+    open_link_in_thread("https://sites.google.com/view/yt-to-dowload/教學/取得網址")
+
 def show_fuontion_menu(event): fuontionmenu.post(event.x_root, event.y_root)
 
 def select_download_folder():
@@ -469,13 +487,13 @@ mp3start_button = ctk.CTkButton(root, text="開始轉換", state=ctk.DISABLED, c
 mp3browse_button = ctk.CTkButton(root, text="瀏覽", command=lambda:mp3(mp3label, mp3start_button, first_open), font=("Arial", 20, "bold"))
 
 if settings["background_color"] == "Dark" :
-    MENU_BG = "#2a2a2a"  # 背景色
-    MENU_FG = "white"    # 文字顏色
+    MENU_BG = "#2a2a2a" # 背景色
+    MENU_FG = "white" # 文字顏色
     MENU_ACTIVE_BG = "#3e3e3e" # 懸停時的背景色
     MENU_ACTIVE_FG = "white"
 else:
-    MENU_BG = "#f0f0f0"  # 背景色
-    MENU_FG = "black"    # 文字顏色
+    MENU_BG = "#f0f0f0" # 背景色
+    MENU_FG = "black" # 文字顏色
     MENU_ACTIVE_BG = "#d9d9d9" # 懸停時的背景色
     MENU_ACTIVE_FG = "black"
 # 右鍵選單
