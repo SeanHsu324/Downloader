@@ -32,12 +32,13 @@ return_black_path = resource_path("picture/return_black.png")
 notify_white_path = resource_path("picture/notify_white.png")
 notify_black_path = resource_path("picture/notify_black.png")
 
-# --- 啟動畫面函式 ---
+# --- 核心修改：啟動畫面函式 ---
 def splash_screen(main_root):
     """載入畫面，依附於主視窗"""
     splash = ctk.CTkToplevel(main_root)
     splash.overrideredirect(True)
-
+
+    # 載入圖片並保持參考，防止被垃圾回收
     try:
         img = Image.open(picture_path)
         img = img.resize((432, 102))
@@ -46,7 +47,7 @@ def splash_screen(main_root):
         print(f"無法載入啟動畫面圖片: {e}")
         splash.splash_img_ref = None
 
-    
+    # 設定視窗大小與位置
     win_width, win_height = 432, 102
     screen_width = splash.winfo_screenwidth()
     screen_height = splash.winfo_screenheight()
@@ -54,7 +55,7 @@ def splash_screen(main_root):
     y = (screen_height - win_height) // 2
     splash.geometry(f"{win_width}x{win_height}+{x}+{y}")
 
-    
+    # 顯示圖片
     if splash.splash_img_ref:
         label = ctk.CTkLabel(splash, image=splash.splash_img_ref, text="")
         label.pack()
@@ -67,8 +68,11 @@ def splash_screen(main_root):
     # 停留 5 秒後執行
     splash.after(5000, show_main_window)
     return splash
-
-root = ctk.CTk()
+
+# --- 核心修改：應用程式初始化流程 ---
+# 1. 建立整個應用程式唯一的根視窗
+root = ctk.CTk()
+# 2. 立即隱藏主視窗，直到啟動畫面結束
 root.withdraw()
 
 # --- 主視窗設定 ---
@@ -77,17 +81,16 @@ root.resizable(False, False)
 root.title("Downloader")
 root.iconbitmap(ico_path)
 
-
+# 3. 啟動載入畫面，傳入唯一的 root
 splash = splash_screen(root)
 
-# --- 開始載入主程式 ---
+# --- 開始載入主程式其餘部分 ---
 threads = []
 first_open = 0
 
 print(f"FFmpeg 路徑: {ffmpeg_path}")
 
 download_folder = os.path.join(os.path.expanduser("~"), "Desktop", "youtube下載")
-os.makedirs(download_folder, exist_ok=True)
 
 settings = {}
 
@@ -130,7 +133,10 @@ else:
     settings = {"background_color": "Dark", "subject_color": "#478058", "text_color": "black", "hover_color":"#223E2A", "mp4": "bestvideo[ext=mp4]+bestaudio/mp4", "mp3": "bestaudio/m4a", "download_folder": download_folder}
     with open(json_file_path, "w") as file:
         json.dump(settings, file)
-
+
+
+
+# --- 函式定義 (保持不變) ---
 def set_background_color(choice):
     if choice == "深色": ctk.set_appearance_mode("Dark"); settings["background_color"] = "Dark"
     elif choice == "淺色": ctk.set_appearance_mode("Light"); settings["background_color"] = "Light"
@@ -218,14 +224,74 @@ def show_fuontion_menu(event): fuontionmenu.post(event.x_root, event.y_root)
 
 def select_download_folder():
     global download_folder
-    folder = filedialog.askdirectory(title="選擇下載位置", initialdir=settings.get("download_folder", download_folder))
+    folder = filedialog.askdirectory(title="變更下載位置", initialdir=settings.get("download_folder", download_folder))
     if folder:
         settings["download_folder"] = folder
         with open(json_file_path, "w") as file: json.dump(settings, file)
 
+class ToolTip:
+    """建立一個提示框，當滑鼠懸停在指定元件上時顯示提示內容"""
+    def __init__(self, widget):
+        self.widget = widget
+        self.tipwindow = None
+        self.id = None
+        
+        # 綁定滑鼠事件
+        self.widget.bind("<Enter>", self.enter)
+        self.widget.bind("<Leave>", self.leave)
+
+    def enter(self, event=None):
+        # 設置延遲
+        self.schedule()
+
+    def leave(self, event=None):
+        self.unschedule()
+        self.hidetip()
+
+    def schedule(self):
+        self.unschedule()
+        
+        self.id = self.widget.after(50, self.showtip)
+
+    def unschedule(self):
+        id = self.id
+        self.id = None
+        if id:
+            self.widget.after_cancel(id)
+
+    def showtip(self, event=None):
+        "顯示提示框，並從全域變數獲取最新內容"
+        global settings
+        
+        text = f"目前下載位置:\n{settings["download_folder"]}"
+
+        if self.tipwindow or not text:
+            return
+        
+        self.tipwindow = ctk.CTkToplevel(self.widget)
+        self.tipwindow.wm_overrideredirect(True) 
+        
+        x, y, cx, cy = self.widget.bbox("insert")
+        x = x + self.widget.winfo_rootx() 
+        y = y + cy + self.widget.winfo_rooty() + 10
+        self.tipwindow.wm_geometry("+%d+%d" % (x, y))
+
+        label = ctk.CTkLabel(self.tipwindow, text=text, justify="left", 
+                             fg_color=("#3a3a3a", "#3a3a3a"), 
+                             text_color="white", 
+                             corner_radius=5,
+                             padx=10, pady=5)
+        label.pack(ipadx=1)
+
+    def hidetip(self):
+        "隱藏提示框"
+        tw = self.tipwindow
+        self.tipwindow = None
+        if tw:
+            tw.destroy()
+
 # --- 頁面切換函式 ---
 def ytdownload():
-    #root.unbind("<Button-3>")
     root.bind("<Button-3>", show_fuontion_menu)
     url_box.bind("<Button-3>", show_context_menu)
     url_box.focus_set()
@@ -380,7 +446,8 @@ sett_button.place(relx=0.9, rely=0.05)
 
 backgroundcolor_menu = ctk.CTkOptionMenu(root, values=["系統", "深色", "淺色"], width=200, height=40, command=set_background_color, font=("Arial", 20, "bold"))
 changebutton = ctk.CTkButton(root, text="選擇顏色", command=choose_color, width=200, height=40, font=("Arial", 20, "bold"))
-change_download_folder = ctk.CTkButton(root, text="選擇下載位置", command=select_download_folder, width=200, height=40, font=("Arial", 20, "bold"))
+change_download_folder = ctk.CTkButton(root, text="變更下載位置", command=select_download_folder, width=200, height=40, font=("Arial", 20, "bold"))
+ToolTip(change_download_folder) # 提示目前下載位置
 
 # 功能頁
 previous_button = ctk.CTkButton(root, text="←", corner_radius=10, width=40, height=40, command=function, font=("Arial", 20, "bold"))
@@ -401,16 +468,39 @@ mp3label = ctk.CTkLabel(root, text="請選擇 MP4 檔案", width=400, height=30,
 mp3start_button = ctk.CTkButton(root, text="開始轉換", state=ctk.DISABLED, command=lambda:convert_mp4_to_mp3(ffmpeg_path, first_open), font=("Arial", 20, "bold"))
 mp3browse_button = ctk.CTkButton(root, text="瀏覽", command=lambda:mp3(mp3label, mp3start_button, first_open), font=("Arial", 20, "bold"))
 
+if settings["background_color"] == "Dark" :
+    MENU_BG = "#2a2a2a"  # 背景色
+    MENU_FG = "white"    # 文字顏色
+    MENU_ACTIVE_BG = "#3e3e3e" # 懸停時的背景色
+    MENU_ACTIVE_FG = "white"
+else:
+    MENU_BG = "#f0f0f0"  # 背景色
+    MENU_FG = "black"    # 文字顏色
+    MENU_ACTIVE_BG = "#d9d9d9" # 懸停時的背景色
+    MENU_ACTIVE_FG = "black"
 # 右鍵選單
-menu = tk.Menu(root, tearoff=0)
+menu = tk.Menu(root, tearoff=0, 
+    bg=MENU_BG, 
+    fg=MENU_FG, 
+    activebackground=MENU_ACTIVE_BG, 
+    activeforeground=MENU_ACTIVE_FG,
+    font=("Arial", 12)
+)
 menu.add_command(label="貼上", command=paste_text)
 menu.add_command(label="剪下", command=cut_text)
 menu.add_command(label="全選", command=select_all)
 menu.add_command(label="如何取得網址", command=teaching_3)
-fuontionmenu = tk.Menu(root, tearoff=0)
+fuontionmenu = tk.Menu(root, tearoff=0,
+    bg=MENU_BG, 
+    fg=MENU_FG, 
+    activebackground=MENU_ACTIVE_BG, 
+    activeforeground=MENU_ACTIVE_FG,
+    font=("Arial", 12)
+)
 fuontionmenu.add_command(label="官網教學", command=teaching)
 fuontionmenu.add_command(label="設置Cookies教學", command=teaching_2)
-
+
+# --- 程式啟動後載入設定 ---
 if os.path.exists(json_file_path):
     load()
     print("load")
