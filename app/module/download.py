@@ -104,10 +104,7 @@ def format_eta(eta_seconds):
         return f"{int(minutes)}分{int(seconds)}秒"
     else:
         return f"{int(seconds)}秒"
-"""
-download_folder = os.path.join(os.path.expanduser("~"), "Desktop", "youtube下載")# 設置保存下載視頻的根目錄到桌面的「youtube下載」文件夾中
-os.makedirs(download_folder, exist_ok=True)
-"""
+
 def show_error_message(e):
     messagebox.showerror("錯誤", f"下載失敗: {str(e)}")
 
@@ -252,6 +249,19 @@ def on_download_button_click(cook, url_box, dropdown_menu, ffmpeg_path, first_op
         if format_choice == "選擇格式":
             messagebox.showwarning("警告", "請選擇下載格式")
             return
+        
+        if download_folder is None:
+                download_folder = os.path.join(os.path.expanduser("~"), "Desktop", "youtube下載")
+        
+        if download_folder is not os.path.exists(download_folder):
+            
+            try:
+                os.makedirs(download_folder, exist_ok=True)
+                print(f"成功創建下載資料夾: {download_folder}")
+
+            except OSError as e:
+                print(f"錯誤：無法創建下載資料夾 '{download_folder}'。請檢查路徑和權限。錯誤訊息: {e}")
+                return
 
         if url:
             progress_window = DownloadProgressWindow(cook)
@@ -262,10 +272,12 @@ def on_download_button_click(cook, url_box, dropdown_menu, ffmpeg_path, first_op
                 is_downloading = False
 
         
-                # 判斷是否為播放清單
-            if 'list=' in url:
+            # 判斷是否為播放清單
+            if 'playlist?' in url:
                 Thread(target=download_playlist, args=(url, format_choice, progress_window, on_complete_callback, url_box, ffmpeg_path, mp3_format, mp4_format, download_folder)).start()
             else:
+                if 'list=' in url:
+                    url = url.split('&list=')[0]  # 移除播放清單參數，只下載單一影片
                 Thread(target=download_video, args=(url, format_choice, progress_window, on_complete_callback, url_box, ffmpeg_path, mp3_format, mp4_format, download_folder)).start()
         else:
             messagebox.showwarning("警告", "請輸入有效的網址")

@@ -57,31 +57,44 @@ def renew_root(first_open, root):
 
         """顯示更新提示視窗"""
         renew_root = ctk.CTkToplevel(root)
-        renew_root.geometry("400x200")
-        renew_root.resizable(False, False)
+        renew_root.geometry("450x300")
         renew_root.title("更新")
         renew_root.attributes("-topmost", True)
-        
+
+
+        renew_root.grid_rowconfigure(0, weight=0)  
+        renew_root.grid_rowconfigure(1, weight=1)   
+        renew_root.grid_rowconfigure(2, weight=0)   
+        renew_root.grid_columnconfigure(0, weight=1) 
 
         text_label = ctk.CTkLabel(
             renew_root, 
             text=f"新版本:{latest_version}\n是否更新？",
             font=("Arial", 20, "bold")
         )
-        text_label.pack(pady=10)
+   
+        text_label.grid(row=0, column=0, pady=(10, 5), sticky="ew")
 
-        textbox = ctk.CTkTextbox(renew_root, height=60, font=("Arial", 14))
+
+        textbox = ctk.CTkTextbox(
+            renew_root, 
+            height=60, 
+            font=("Arial", 14)
+        )
         textbox.insert("1.0", f"更新內容\n{release_notes}")
-        textbox.configure(state="disabled")  # 設為唯讀
-        textbox.pack(pady=10, padx=20, fill="both", expand=False)
+        textbox.configure(state="disabled") # 設為唯讀
 
+        textbox.grid(row=1, column=0, pady=10, padx=20, sticky="nsew") 
+
+ 
         btn_frame = ctk.CTkFrame(renew_root, fg_color="transparent")
-        btn_frame.pack()
+
+        btn_frame.grid(row=2, column=0, pady=(5, 20), sticky="ew") 
 
         renew_start = ctk.CTkButton(
             btn_frame, 
             text="更新", 
-            command=lambda:work(renew_root),  # 按下後執行更新，並關閉 main.py 的 root
+            command=lambda:work(renew_root),
             font=("Arial", 20, "bold")
         )
         renew_start.pack(side="right", padx=5)
@@ -92,7 +105,7 @@ def renew_root(first_open, root):
             command=renew_root.destroy, 
             font=("Arial", 20, "bold")
         )
-        renew_root_button.pack(side="left", padx=5)
+        renew_root_button.pack(side="right", padx=5)
 
         renew_root.grab_set()
 
