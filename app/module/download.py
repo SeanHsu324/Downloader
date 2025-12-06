@@ -8,6 +8,7 @@ from tkinter import END
 import sys
 import webbrowser
 import json
+from urllib.parse import urlparse
 
 main_view = None  # 用於儲存 main.py 的 root
 
@@ -199,6 +200,56 @@ def download_playlist(playlist_url, format_choice, progress_window, on_complete_
         on_complete_callback()
 
 
+
+
+def download_channel_videos(channel_url, format_choice, progress_window, on_complete_callback, url_box, ffmpeg_path, mp3_format, mp4_format, download_folder):
+    try:
+        channel_outtmpl = os.path.join(download_folder, '%(uploader)s', '%(title)s.%(ext)s')
+        
+        archive_file_path = os.path.join(download_folder, 'downloaded_archive.txt')
+
+        if format_choice == "mp3":
+            ydl_opts = {
+                'format': f"{mp3_format}",
+                'outtmpl': channel_outtmpl,
+                'postprocessors': [{
+                    'key': 'FFmpegExtractAudio',
+                    'preferredcodec': 'mp3',
+                    'preferredquality': '192',
+                }],
+                'ffmpeg_location': ffmpeg_path,
+                'progress_hooks': [progress_hook(progress_window)],
+                "cookies": cookie_txt_path,
+                'quiet': True,
+                'download_archive': archive_file_path 
+            }
+        else:
+            ydl_opts = {
+                'format': f"{mp4_format}",
+                # 專門用於頻道的輸出模板
+                'outtmpl': channel_outtmpl,
+                'merge_output_format': 'mp4',
+                'ffmpeg_location': ffmpeg_path,
+                'progress_hooks': [progress_hook(progress_window)],
+                "cookies": cookie_txt_path,
+                'quiet': True,
+                'download_archive': archive_file_path 
+            }
+
+        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+            ydl.download([channel_url])
+
+        main_view.after(0, lambda: show_success_message(url_box, format_choice))
+    except Exception as e:
+        main_view.after(0, lambda: show_error_message(e))
+    finally:
+        main_view.after(0, lambda: url_box.delete(0, END))
+        main_view.after(0, progress_window.destroy)
+        on_complete_callback()
+
+
+
+
 def progress_hook(progress_window):
     def hook(d):
         if d['status'] == 'downloading':
@@ -220,9 +271,39 @@ def progress_hook(progress_window):
             progress_window.after(0, lambda: progress_window.set_eta("合併中..."))
     return hook
 
+
+def is_youtube_channel_url(url: str) -> bool:
+    try:
+        # 1. 解析網址
+        parsed_url = urlparse(url)
+        path_segments = [s for s in parsed_url.path.split('/') if s]
+
+        # 2. 檢查網域是否為 youtube
+        if 'youtube.com' not in parsed_url.netloc:
+            return False
+
+        # 3. 檢查路徑結構
+        if not path_segments:
+            return False
+            
+        # 檢查新版 Handle (例如: /@Gemini)
+        if path_segments[0].startswith('@'):
+            return True
+        
+        # 檢查舊版關鍵字 (例如: /user/..., /channel/..., /c/...)
+        channel_keywords = ['user', 'channel', 'c']
+        if path_segments[0].lower() in channel_keywords:
+            return True
+            
+        return False
+        
+    except Exception:
+        # 處理無效的網址格式
+        return False
+
 is_downloading = False
 
-def on_download_button_click(cook, url_box, dropdown_menu, ffmpeg_path, first_open, mp3_format, mp4_format, download_folder):
+def on_download_button_click(cook, url_box, dropdown_menu, ffmpeg_path, first_open, mp3_format, mp4_format, download_folder,check_button_var):
     global is_downloading
     
     if first_open != 1:
@@ -249,7 +330,7 @@ def on_download_button_click(cook, url_box, dropdown_menu, ffmpeg_path, first_op
         if format_choice == "選擇格式":
             messagebox.showwarning("警告", "請選擇下載格式")
             return
-        
+        print(f"下載資料夾:{download_folder}")
         if download_folder is None:
                 download_folder = os.path.join(os.path.expanduser("~"), "Desktop", "youtube下載")
         
@@ -272,8 +353,24 @@ def on_download_button_click(cook, url_box, dropdown_menu, ffmpeg_path, first_op
                 is_downloading = False
 
         
-            # 判斷是否為播放清單
-            if 'playlist?' in url:
+            if is_youtube_channel_url(url):
+                if check_button_var == "True":
+                    result = messagebox.askyesno(
+                        title="操作確認", 
+                        message="輸入的是頻道網址，是否要繼續執行下載操作？\n這可能會花費一段時間且下載時無法取消!"
+                    )
+                    if result:
+                        print("使用者點擊了「是」/Yes，繼續執行操作...")
+                        Thread(target=download_channel_videos, args=(url, format_choice, progress_window, on_complete_callback, url_box, ffmpeg_path, mp3_format, mp4_format, download_folder)).start()
+                    else:
+                        print("使用者點擊了「否」/No，取消操作。")
+                        progress_window.destroy()
+                        is_downloading = False
+                        return  
+                else:
+                    Thread(target=download_channel_videos, args=(url, format_choice, progress_window, on_complete_callback, url_box, ffmpeg_path, mp3_format, mp4_format, download_folder)).start()
+
+            elif 'playlist?' in url:
                 Thread(target=download_playlist, args=(url, format_choice, progress_window, on_complete_callback, url_box, ffmpeg_path, mp3_format, mp4_format, download_folder)).start()
             else:
                 if 'list=' in url:
