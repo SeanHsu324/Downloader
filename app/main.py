@@ -260,7 +260,7 @@ def renew_choose_Check_value():
     if settings["renew_check_button"]=="True":
         result = messagebox.askyesno(
             title="操作確認", 
-            message="確定不「檢查更新」嗎？\n這可能會導致您錯過重要的軟體更新。",
+            message="確定關閉「檢查更新」嗎？\n這可能會導致您錯過重要的軟體更新。",
         )
         if result:
             print("使用者點擊了「是」/Yes，繼續執行操作...")
@@ -510,7 +510,7 @@ status_var = ctk.StringVar(value=settings["check_button"])
 
 check_button = ctk.CTkCheckBox(
     sett_menu_frame_right,
-    text="顯示操作確認視窗",
+    text="顯示操作確認提示",
     variable=status_var,
     onvalue="True",  # 勾選時的值
     offvalue="False", # 未勾選時的值
