@@ -158,7 +158,7 @@ def set_background_color(choice):
     with open(json_file_path, "w") as file: json.dump(settings, file)
 
 def set_Image_quality(choice):
-    quality_map = {"最高畫質": "bestvideo[ext=mp4]+bestaudio/mp4", "1080p": "bestvideo[height=1080]+bestaudio/mp4", "720p": "bestvideo[height=720]+bestaudio/mp4", "480p": "bestvideo[height=480]+bestaudio/mp4", "240p": "bestvideo[height=240]+bestaudio/mp4", "144p": "bestvideo[height=144]+bestaudio/mp4"}
+    quality_map = {"最高畫質": "bestvideo[ext=mp4]+bestaudio/mp4", "1080p": "bestvideo[height<=1080]+bestaudio/mp4", "720p": "bestvideo[height<=720]+bestaudio/mp4", "480p": "bestvideo[height=<480]+bestaudio/mp4", "240p": "bestvideo[height<=240]+bestaudio/mp4", "144p": "bestvideo[height<=144]+bestaudio/mp4"}
     settings["mp4"] = quality_map.get(choice, "bestvideo[ext=mp4]+bestaudio/mp4")
     with open(json_file_path, "w") as file: json.dump(settings, file)
 
