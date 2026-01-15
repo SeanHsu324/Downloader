@@ -1,184 +1,248 @@
-# Downloader
+Downloader
 
-簡介：
-> 下載yt影片。Shorts影片、單一影片、播放清單影片，可大量下載，但瞬間下載100部以上後youtube好像會擋，不過隔天就好了
+📌 簡介
 
----
+> 下載 YouTube 影片工具
+支援 Shorts、單一影片、播放清單、整個頻道下載
+可大量下載，但短時間內下載 100 部以上影片可能會被 YouTube 暫時限制，通常隔天即可恢復（屬於 YouTube 平台行為）
 
-## 目錄
 
-- [功能特色](#功能特色)
-- [系統需求](#系統需求)
-- [安裝方式](#安裝方式)
-- [官網](#軟體教學和使用方法)
-- [程式碼分享](#程式碼分享)
-- [開發與貢獻](#開發與貢獻)
-- [授權](#授權)
+
 
 ---
 
-## 功能特色
+📂 目錄
 
-- 1：免費！免費！免費！沒有下載限制
-- 2：可以下載Shorts影片、單一影片、播放清單影片、全頻道影片
-- 3：介面簡單，沒有複雜的按鈕
-- 4：可以更換喜歡的顏色
+功能特色
+
+系統需求
+
+安裝方式
+
+軟體教學和使用方法
+
+程式碼分享
+
+開發與貢獻
+
+授權
+
+
+
 ---
-## 系統需求
 
-- Windows 10 以上
-- Python 版本：3.13
+✨ 功能特色
+
+1️⃣ 免費！免費！免費！ 沒有下載次數限制
+
+2️⃣ 支援下載：
+
+YouTube Shorts
+
+單一影片
+
+播放清單
+
+整個頻道
+
+
+3️⃣ 介面簡單，沒有複雜設定
+
+4️⃣ 可自由更換喜歡的顏色主題
+
+
 
 ---
 
-## 安裝方式
+💻 系統需求
 
-### Windows(推薦)
+Windows 10 以上
 
-安全性說明
+Python 3.13（原始碼執行時）
+
+
+
+---
+
+🛠️ 安裝方式
+
+🪟 Windows（推薦）
+
+🔐 安全性說明
+
 > 本程式（.exe）在執行時，Windows 可能會顯示安全性警告。
+
+
+
 這是正常現象，原因在於本專案尚未進行「程式碼簽章（Code Signing）」。
-程式碼簽章需支付額外費用，為了能夠讓使用者免費下載與使用本工具，目前未辦理簽章。
-本專案為開源專案，所有程式碼皆可於 GitHub 上檢視。
-若您對安全性有疑慮，可自行從原始碼進行打包與執行。
 
-1. 到<https://sites.google.com/view/yt-to-dowload>或<https://github.com/SeanHsu324/Setup>下載DownloaderSetup.exe
-2. 解壓縮到任意資料夾
-3. 雙擊 `DownloaderSetup.exe` 開始自動下載
+程式碼簽章需支付額外費用，為了能夠讓使用者免費下載與使用本工具，目前未辦理簽章，因此 Windows 可能會顯示未知來源的警告提示。
 
-### Python 環境版本 (無法自動更新，需手動更換.py)
+本專案為開源專案，所有程式碼皆公開於 GitHub，可自行檢視。
 
-```bash
+🔒 隱私與資料安全
+
+本程式不會蒐集、上傳或傳送任何使用者資料
+
+所有下載與處理行為皆於本機端執行
+
+cookie.txt 僅供本地使用，請勿分享給任何人
+
+
+若您對安全性仍有疑慮，可自行從原始碼進行打包與執行。
+
+
+---
+
+📥 安裝步驟
+
+1. 前往
+
+https://sites.google.com/view/yt-to-dowload
+
+或 https://github.com/SeanHsu324/Setup
+下載 DownloaderSetup.exe
+
+
+
+2. 解壓縮至任意資料夾
+
+
+3. 雙擊 DownloaderSetup.exe，開始自動下載並安裝主程式
+
+
+
+
+---
+
+🐍 Python 原始碼版本
+
+> ⚠️ 此方式 無法自動更新，需自行手動更新 .py 檔案
+
+
+
 git clone https://github.com/SeanHsu324/Downloader.git
 cd Downloader
-#建立環境
+
+# 建立虛擬環境
 python -m venv venv
 
-#同意執行環境
+# 允許執行虛擬環境（PowerShell）
 Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
 
-#進入環境
+# 啟動虛擬環境
 .\venv\Scripts\Activate
 
-#安裝打包模組
-pip install pyinstaller
+# 更新 pip 並安裝依賴
 pip install --upgrade pip
+pip install pyinstaller
 pip install -r requirements.txt
 
-#或
-python -m pip install -r requirements.txt
-```
-### 建立空白的cookie.txt(和main.py放在同一個資料夾)
-⚠️ 請勿將 cookie.txt 分享給任何人
-⚠️ 本程式不會上傳 cookie，所有行為皆在本機執行（空白也可之執行）
-在專案目錄下執行以下指令即可建立一個空白檔案：
 
-```bash
+---
+
+🍪 建立 cookie.txt（與 main.py 放在同一資料夾）
+
+⚠️ 請勿將 cookie.txt 分享給任何人
+⚠️ 本程式不會上傳或傳送 cookie，所有行為皆於本機執行
+⚠️ 即使為空白檔案，程式仍可正常執行
+
+建立空白檔案：
+
 # Linux / macOS
 touch cookie.txt
 
-# 或者
-> cookie.txt
-
-# Windows (cmd)
+# Windows CMD
 type nul > cookie.txt
 
-# Windows (PowerShell)
+# Windows PowerShell
 New-Item cookie.txt -ItemType File -Force
-```
-### 下載FFmpeg
-和main.py放在同一個資料夾
-> <https://github.com/SeanHsu324/FFmpeg/releases/download/v1.00/ffmpeg.rar>
-### 在C:\建立downloadsitt資料夾
-再建立renew.json(因為沒有可能會報錯但不太需要，因為無法自動更新)
-```bash
+
+
+---
+
+🎬 FFmpeg 下載
+
+請下載 FFmpeg 並與 main.py 放在同一資料夾：
+
+> https://github.com/SeanHsu324/FFmpeg/releases/download/v1.00/ffmpeg.rar
+
+
+
+
+---
+
+📁 建立更新資料夾（原始碼模式）
+
+在 C:\ 建立資料夾：
+
+C:\downloadsitt
+
+並建立 renew.json（避免錯誤，實際上不影響功能）：
+
 {
     "檔案名稱": "Downloader.exe",
-    "版本": "(自己改成最新版本)",
-    "下載位置": "(main.py在的資料夾路徑)"
+    "版本": "(自行填寫版本)",
+    "下載位置": "(main.py 所在資料夾路徑)"
 }
-```
----
----
-## 軟體教學和使用方法
-> <https://sites.google.com/view/yt-to-dowload/%E6%95%99%E5%AD%B8>
- 
----
+
+
 ---
 
-## 程式碼分享
+📖 軟體教學和使用方法
 
-### 將 HEX 色碼變暗一定比例
-可以做碰到按鈕顏色變深
-```bash
+👉 https://sites.google.com/view/yt-to-dowload/%E6%95%99%E5%AD%B8
+
+
+---
+
+💡 程式碼分享
+
+🎨 HEX 顏色變暗（按鈕 hover 效果）
+
 import colorsys
 
 def darken_color(color: str, percent: float):
-    """
-    將 HEX 色碼變暗一定比例（降低 HSL 亮度值）。
-    
-    :param color: 原始 HEX 色碼，例如 "#80FF42"
-    :param percent: 降低的百分比，例如 20 表示降低 20%
-    :return: 變暗後的 HEX 色碼
-    """
-    # 解析 HEX 顏色為 RGB（0-255）
     color = color.lstrip("#")
     r, g, b = int(color[0:2], 16), int(color[2:4], 16), int(color[4:6], 16)
 
-    # 轉換 RGB 到 HLS (HSL)
     h, l, s = colorsys.rgb_to_hls(r / 255, g / 255, b / 255)
+    l = max(0, l - (percent / 100))
 
-    # 降低亮度 L
-    l = max(0, l - (percent / 100))  # 確保不低於 0
-
-    # 轉回 RGB
     r, g, b = colorsys.hls_to_rgb(h, l, s)
-    r, g, b = int(r * 255), int(g * 255), int(b * 255)
+    return f"#{int(r*255):02X}{int(g*255):02X}{int(b*255):02X}"
 
-    # 回傳 HEX 色碼
-    return f"#{r:02X}{g:02X}{b:02X}"
-```
----
-這樣使用:
-```bash
-darken_color("#80ff42", 20)   #(色號, 變深的百分比)
-```
-![展示](assets/變深.gif)
+使用方式：
+
+darken_color("#80ff42", 20)
+
 
 ---
 
-### 判斷是否為淺色
-可以判斷被景色讓文字變白或黑
-```bash
-import colorsys
+🌗 判斷顏色是否為淺色（文字自動變黑 / 白）
 
 def is_light_color(hex_color):
-    """
-    根據顏色的亮度判斷是否為淺色。
-    hex_color: 顏色的 16 進位碼（#RRGGBB）
-    返回: True 表示淺色，False 表示深色
-    """
     hex_color = hex_color.lstrip('#')
     r, g, b = int(hex_color[0:2], 16), int(hex_color[2:4], 16), int(hex_color[4:6], 16)
-    brightness = (r * 299 + g * 587 + b * 114) / 1000  # 加權計算亮度
-    return brightness > 127  # 亮度高於 127 為淺色，輸出Ture
-```
----
-這樣使用:
-```bash
-is_light_color("#80ff42")   #(色號)
-```
-![展示2](assets/文字變色.gif)
+    brightness = (r * 299 + g * 587 + b * 114) / 1000
+    return brightness > 127
+
 
 ---
-## 開發與貢獻
-[SeanHsu324](https://github.com/SeanHsu324)
+
+👨‍💻 開發與貢獻
+
+作者：SeanHsu324
+
+歡迎 Issue / PR / Fork
+
+
+
 ---
-## 授權
 
-本專案採用 [MIT License](LICENSE) 授權。  
-你可以自由使用、修改與散布此程式碼，但必須保留原作者資訊。  
+📄 授權
 
-© 2025 [SeanHsu324](https://github.com/SeanHsu324)
+本專案採用 MIT License 授權。
+你可以自由使用、修改與散布此程式碼，但必須保留原作者資訊。
 
-
+© 2025 SeanHsu324
