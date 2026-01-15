@@ -231,7 +231,7 @@ def is_light_color(hex_color):
 
 ## 👨‍💻 開發與貢獻
 >
-作者：SeanHsu324
+作者：[SeanHsu324](https://github.com/SeanHsu324)
 
 歡迎 Issue / PR / Fork
 
@@ -244,4 +244,4 @@ def is_light_color(hex_color):
 本專案採用 MIT License 授權。
 你可以自由使用、修改與散布此程式碼，但必須保留原作者資訊。
 
-© 2025 SeanHsu324
+© 2025 [SeanHsu324](https://github.com/SeanHsu324)
