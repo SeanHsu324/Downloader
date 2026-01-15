@@ -114,7 +114,7 @@ https://sites.google.com/view/yt-to-dowload
 ---
 
 ## 🐍 Python 原始碼版本
-
+先安裝 [Git](https://share.google/fTlNpMDKaDorZP4lt)再繼續
 > ⚠️ 此方式 無法自動更新，需自行手動更新 .py 檔案
 
 
