@@ -92,7 +92,7 @@ cookie.txt 僅供本地使用，請勿分享給任何人
 
 ---
 
-## 📥 安裝步驟
+#### 📥 安裝步驟
 
 1. 前往
 
@@ -212,7 +212,7 @@ def darken_color(color: str, percent: float):
     return f"#{int(r*255):02X}{int(g*255):02X}{int(b*255):02X}"
 
 使用方式：
-
+```
 darken_color("#80ff42", 20)
 
 ```
@@ -230,7 +230,7 @@ def is_light_color(hex_color):
 ---
 
 ## 👨‍💻 開發與貢獻
-
+>
 作者：SeanHsu324
 
 歡迎 Issue / PR / Fork
