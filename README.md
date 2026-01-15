@@ -197,7 +197,7 @@ C:\downloadsitt
 
 ## 💡 程式碼分享
 
-### 🎨 HEX 顏色變暗（按鈕 hover 效果）
+#### 🎨 HEX 顏色變暗（按鈕 hover 效果）
 ```
 import colorsys
 
@@ -218,7 +218,7 @@ darken_color("#80ff42", 20)
 ```
 ---
 
-### 🌗 判斷顏色是否為淺色（文字自動變黑 / 白）
+#### 🌗 判斷顏色是否為淺色（文字自動變黑 / 白）
 ```
 def is_light_color(hex_color):
     hex_color = hex_color.lstrip('#')
