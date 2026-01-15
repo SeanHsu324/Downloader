@@ -241,7 +241,7 @@ def is_light_color(hex_color):
 
 ## 📄 授權
 
-本專案採用 MIT License 授權。
+本專案採用 [MIT License](LICENSE) 授權。
 你可以自由使用、修改與散布此程式碼，但必須保留原作者資訊。
 
 © 2025 [SeanHsu324](https://github.com/SeanHsu324)
