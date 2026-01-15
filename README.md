@@ -34,14 +34,14 @@
 ## 安裝方式
 
 ### Windows(推薦)
----
-安全性說明
-本程式（.exe）在執行時，Windows 可能會顯示安全性警告。
+
+####安全性說明
+> 本程式（.exe）在執行時，Windows 可能會顯示安全性警告。
 這是正常現象，原因在於本專案尚未進行「程式碼簽章（Code Signing）」。
 程式碼簽章需支付額外費用，為了能夠讓使用者免費下載與使用本工具，目前未辦理簽章。
 本專案為開源專案，所有程式碼皆可於 GitHub 上檢視。
 若您對安全性有疑慮，可自行從原始碼進行打包與執行。
----
+
 1. 到<https://sites.google.com/view/yt-to-dowload>或<https://github.com/SeanHsu324/Setup>下載DownloaderSetup.exe
 2. 解壓縮到任意資料夾
 3. 雙擊 `DownloaderSetup.exe` 開始自動下載
