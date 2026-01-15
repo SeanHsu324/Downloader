@@ -141,10 +141,10 @@ pip install -r requirements.txt
 
 #### 🍪 建立 cookie.txt（與 main.py 放在同一資料夾）
 
--⚠️ 請勿將 cookie.txt 分享給任何人
--⚠️ 本程式不會上傳或傳送 cookie，所有行為皆於本機執行
--⚠️ 即使為空白檔案，程式仍可正常執行
-
+- ⚠️ 請勿將 cookie.txt 分享給任何人
+- ⚠️ 本程式不會上傳或傳送 cookie，所有行為皆於本機執行
+- ⚠️ 即使為空白檔案，程式仍可正常執行
+ 
 建立空白檔案：
 ```
 # Linux / macOS
