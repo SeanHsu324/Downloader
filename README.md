@@ -11,7 +11,7 @@ Downloader
 
 ---
 
-##📂 目錄
+## 📂 目錄
 
 功能特色
 
@@ -66,9 +66,9 @@ YouTube Shorts
 
 ## 🛠️ 安裝方式
 
-###🪟 Windows（推薦）
+### 🪟 Windows（推薦）
 
-🔐 安全性說明
+#### 🔐 安全性說明
 
 > 本程式（.exe）在執行時，Windows 可能會顯示安全性警告。
 
@@ -78,7 +78,7 @@ YouTube Shorts
 
 本專案為開源專案，所有程式碼皆公開於 GitHub，可自行檢視。
 
-###🔒 隱私與資料安全
+### 🔒 隱私與資料安全
 
 本程式不會蒐集、上傳或傳送任何使用者資料
 
@@ -92,7 +92,7 @@ cookie.txt 僅供本地使用，請勿分享給任何人
 
 ---
 
-##📥 安裝步驟
+## 📥 安裝步驟
 
 1. 前往
 
@@ -113,7 +113,7 @@ https://sites.google.com/view/yt-to-dowload
 
 ---
 
-##🐍 Python 原始碼版本
+## 🐍 Python 原始碼版本
 
 > ⚠️ 此方式 無法自動更新，需自行手動更新 .py 檔案
 
@@ -139,7 +139,7 @@ pip install -r requirements.txt
 
 ---
 
-###🍪 建立 cookie.txt（與 main.py 放在同一資料夾）
+### 🍪 建立 cookie.txt（與 main.py 放在同一資料夾）
 
 ⚠️ 請勿將 cookie.txt 分享給任何人
 ⚠️ 本程式不會上傳或傳送 cookie，所有行為皆於本機執行
@@ -159,7 +159,7 @@ New-Item cookie.txt -ItemType File -Force
 
 ---
 
-###🎬 FFmpeg 下載
+### 🎬 FFmpeg 下載
 
 請下載 FFmpeg 並與 main.py 放在同一資料夾：
 
@@ -170,7 +170,7 @@ New-Item cookie.txt -ItemType File -Force
 
 ---
 
-###📁 建立更新資料夾（原始碼模式）
+### 📁 建立更新資料夾（原始碼模式）
 
 在 C:\ 建立資料夾：
 
@@ -188,17 +188,17 @@ C:\downloadsitt
 ```
 ---
 
-##📖 軟體教學和使用方法
+## 📖 軟體教學和使用方法
 
 👉 https://sites.google.com/view/yt-to-dowload/%E6%95%99%E5%AD%B8
 
 
 ---
 
-##💡 程式碼分享
+## 💡 程式碼分享
 
 🎨 HEX 顏色變暗（按鈕 hover 效果）
-
+```
 import colorsys
 
 def darken_color(color: str, percent: float):
@@ -215,21 +215,21 @@ def darken_color(color: str, percent: float):
 
 darken_color("#80ff42", 20)
 
-
+```
 ---
 
-##🌗 判斷顏色是否為淺色（文字自動變黑 / 白）
-
+## 🌗 判斷顏色是否為淺色（文字自動變黑 / 白）
+```
 def is_light_color(hex_color):
     hex_color = hex_color.lstrip('#')
     r, g, b = int(hex_color[0:2], 16), int(hex_color[2:4], 16), int(hex_color[4:6], 16)
     brightness = (r * 299 + g * 587 + b * 114) / 1000
     return brightness > 127
 
-
+```
 ---
 
-##👨‍💻 開發與貢獻
+## 👨‍💻 開發與貢獻
 
 作者：SeanHsu324
 
@@ -239,7 +239,7 @@ def is_light_color(hex_color):
 
 ---
 
-##📄 授權
+## 📄 授權
 
 本專案採用 MIT License 授權。
 你可以自由使用、修改與散布此程式碼，但必須保留原作者資訊。
