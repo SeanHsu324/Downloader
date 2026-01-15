@@ -37,13 +37,13 @@ Downloader
 
 2️⃣ 支援下載：
 
-YouTube Shorts
+- YouTube Shorts
 
-單一影片
+- 單一影片
 
-播放清單
+- 播放清單
 
-整個頻道
+- 整個頻道
 
 
 3️⃣ 介面簡單，沒有複雜設定
