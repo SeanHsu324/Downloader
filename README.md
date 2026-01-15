@@ -118,7 +118,7 @@ https://sites.google.com/view/yt-to-dowload
 > ⚠️ 此方式 無法自動更新，需自行手動更新 .py 檔案
 
 
-```
+```bash
 git clone https://github.com/SeanHsu324/Downloader.git
 cd Downloader
 
@@ -146,7 +146,7 @@ pip install -r requirements.txt
 - ⚠️ 即使為空白檔案，程式仍可正常執行
  
 建立空白檔案：
-```
+```bash
 # Linux / macOS
 touch cookie.txt
 
@@ -177,7 +177,7 @@ New-Item cookie.txt -ItemType File -Force
 C:\downloadsitt
 
 並建立 renew.json（避免錯誤，實際上不影響功能）：
-```
+```json
 
 {
     "檔案名稱": "Downloader.exe",
@@ -198,7 +198,7 @@ C:\downloadsitt
 ## 💡 程式碼分享
 
 #### 🎨 HEX 顏色變暗（按鈕 hover 效果）
-```
+```python
 import colorsys
 
 def darken_color(color: str, percent: float):
@@ -212,14 +212,14 @@ def darken_color(color: str, percent: float):
     return f"#{int(r*255):02X}{int(g*255):02X}{int(b*255):02X}"
 
 使用方式：
-```
+```python
 darken_color("#80ff42", 20)
 
 ```
 ---
 
 #### 🌗 判斷顏色是否為淺色（文字自動變黑 / 白）
-```
+```python
 def is_light_color(hex_color):
     hex_color = hex_color.lstrip('#')
     r, g, b = int(hex_color[0:2], 16), int(hex_color[2:4], 16), int(hex_color[4:6], 16)
