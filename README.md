@@ -62,7 +62,8 @@ pip install -r requirements.txt
 python -m pip install -r requirements.txt
 ```
 ### 建立空白的cookie.txt(和main.py放在同一個資料夾)
-
+⚠️ 請勿將 cookie.txt 分享給任何人
+⚠️ 本程式不會上傳 cookie，所有行為皆在本機執行（空白也可之執行）
 在專案目錄下執行以下指令即可建立一個空白檔案：
 
 ```bash
