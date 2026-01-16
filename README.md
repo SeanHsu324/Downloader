@@ -17,7 +17,7 @@
 
 - [系統需求](#系統需求)
 
-- [安裝方式](#[安裝方式](#%EF%B8%8F%E5%AE%89%E8%A3%9D%E6%96%B9%E5%BC%8F))
+- [安裝方式](#%EF%B8%8F%E5%AE%89%E8%A3%9D%E6%96%B9%E5%BC%8F)
 
 - [軟體教學和使用方法](https://sites.google.com/view/yt-to-dowload/%E6%95%99%E5%AD%B8)
 
