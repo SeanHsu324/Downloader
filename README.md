@@ -199,7 +199,7 @@ def darken_color(color: str, percent: float):
 
     r, g, b = colorsys.hls_to_rgb(h, l, s)
     return f"#{int(r*255):02X}{int(g*255):02X}{int(b*255):02X}"
-
+```
 使用方式：
 ```python
 darken_color("#80ff42", 20)
