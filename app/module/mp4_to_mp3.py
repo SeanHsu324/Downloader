@@ -24,6 +24,7 @@ def mp3(mp3label, mp3start_button, first_open):
             mp3start_button.configure(state=ctk.NORMAL)
 
 def convert_mp4_to_mp3(ffmpeg_path, first_open):
+    global file_path  # 使用全域變數
     if first_open != 1:
         first_open = 1
         print(first_open)

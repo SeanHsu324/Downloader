@@ -94,6 +94,11 @@ class DownloadProgressWindow(ctk.CTkToplevel):
 def clean_ansi_codes(text):
     return re.sub(r'\x1b\[[0-9;]*m', '', text)
 
+def sanitize_filename(filename):
+    """移除 Windows 不合法的檔名字元"""
+    # Windows 不合法字元: \ / : * ? " < > |
+    return re.sub(r'[\\/:*?"<>|]', '', filename)
+
 def format_eta(eta_seconds):
     if eta_seconds is None:
         return "正在尋找..."
@@ -111,7 +116,9 @@ def show_error_message(e):
 
 def show_success_message(url_box ,format_choice):
     url = url_box.get()
-    if 'list=' in url:
+    if is_youtube_channel_url(url):
+        messagebox.showinfo("成功", "頻道下載完成！")
+    elif 'playlist?' in url:
         messagebox.showinfo("成功", "清單下載完成！")
     else:
         if format_choice == "mp3":
@@ -127,6 +134,8 @@ def download_video(url, format_choice, progress_window, on_complete_callback, ur
             ydl_opts = {
                 'format': f"{mp3_format}",
                 'outtmpl': os.path.join(download_folder, '%(title)s.%(ext)s'),
+                'restrictfilenames': False,
+                'ignoreerrors': True,  # 忽略下載錯誤，繼續下載下一個影片
                 'postprocessors': [{
                     'key': 'FFmpegExtractAudio',
                     'preferredcodec': 'mp3',
@@ -142,6 +151,8 @@ def download_video(url, format_choice, progress_window, on_complete_callback, ur
                 'format': f"{mp4_format}",
                 'outtmpl': os.path.join(download_folder, '%(title)s.%(ext)s'),
                 'merge_output_format': 'mp4',
+                'restrictfilenames': False,
+                'ignoreerrors': True,  # 忽略下載錯誤，繼續下載下一個影片
                 'ffmpeg_location': ffmpeg_path,
                 'progress_hooks': [progress_hook(progress_window)],
                 "cookies": cookie_txt_path,
@@ -167,6 +178,8 @@ def download_playlist(playlist_url, format_choice, progress_window, on_complete_
             ydl_opts = {
                 'format': f"{mp3_format}",
                 'outtmpl': os.path.join(download_folder, '%(playlist)s', '%(title)s.%(ext)s'),
+                'restrictfilenames': False,
+                'ignoreerrors': True,  # 忽略下載錯誤，繼續下載下一個影片
                 'postprocessors': [{
                     'key': 'FFmpegExtractAudio',
                     'preferredcodec': 'mp3',
@@ -182,6 +195,8 @@ def download_playlist(playlist_url, format_choice, progress_window, on_complete_
                 'format': f"{mp4_format}",
                 'outtmpl': os.path.join(download_folder, '%(playlist)s', '%(title)s.%(ext)s'),
                 'merge_output_format': 'mp4',
+                'restrictfilenames': False,
+                'ignoreerrors': True,  # 忽略下載錯誤，繼續下載下一個影片
                 'ffmpeg_location': ffmpeg_path,
                 'progress_hooks': [progress_hook(progress_window)],
                 "cookies": cookie_txt_path,
@@ -212,6 +227,8 @@ def download_channel_videos(channel_url, format_choice, progress_window, on_comp
             ydl_opts = {
                 'format': f"{mp3_format}",
                 'outtmpl': channel_outtmpl,
+                'restrictfilenames': False,
+                'ignoreerrors': True,
                 'postprocessors': [{
                     'key': 'FFmpegExtractAudio',
                     'preferredcodec': 'mp3',
@@ -229,6 +246,8 @@ def download_channel_videos(channel_url, format_choice, progress_window, on_comp
                 # 專門用於頻道的輸出模板
                 'outtmpl': channel_outtmpl,
                 'merge_output_format': 'mp4',
+                'restrictfilenames': False,
+                'ignoreerrors': True,
                 'ffmpeg_location': ffmpeg_path,
                 'progress_hooks': [progress_hook(progress_window)],
                 "cookies": cookie_txt_path,
@@ -357,7 +376,7 @@ def on_download_button_click(cook, url_box, dropdown_menu, ffmpeg_path, first_op
                 if check_button_var == "True":
                     result = messagebox.askyesno(
                         title="操作確認", 
-                        message="輸入的是頻道網址，是否要繼續執行下載操作？\n這可能會花費一段時間且下載時無法取消!"
+                        message="輸入的是頻道網址，是否要繼續執行下載操作？\n這可能會花費一段時間且下載時無法取消!\n如不想看到此訊息可在設定中關閉此提示。"
                     )
                     if result:
                         print("使用者點擊了「是」/Yes，繼續執行操作...")
