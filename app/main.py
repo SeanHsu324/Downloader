@@ -8,11 +8,12 @@ import webbrowser
 from tkinter import colorchooser, filedialog, messagebox
 import json
 from re import search
-from module.download import on_download_button_click, set_main_view
-from module.word import browse_file, browse_folder, start_conversion
-from module.mp4_to_mp3 import mp3, convert_mp4_to_mp3
-from module.renew import renew, renew_root, set_main_root
 import threading 
+from modules.download import on_download_button_click, set_main_view # type: ignore
+from modules.word import browse_file, browse_folder, start_conversion # type: ignore
+from modules.mp4_to_mp3 import mp3, convert_mp4_to_mp3# type: ignore
+from modules.renew import check_for_updates# type: ignore
+
 
 def resource_path(relative_path):
     """取得資源的正確路徑（適用於開發和打包後的環境）"""
@@ -38,7 +39,7 @@ def splash_screen(main_root):
     """載入畫面，依附於主視窗"""
     splash = ctk.CTkToplevel(main_root)
     splash.overrideredirect(True)
-
+    splash.attributes("-topmost", True)
     # 載入圖片並保持參考，防止被垃圾回收
     try:
         img = Image.open(picture_path)
@@ -101,10 +102,8 @@ def on_closing():
 
 root.protocol("WM_DELETE_WINDOW", on_closing)
 
-set_main_root(root)
 set_main_view(root)
-renew_root(first_open, root)
-print("renew_root:1")
+
 
 work_path = "c:\\downloadsitt"
 json_work_path = os.path.join(work_path, "renew.json")
@@ -158,7 +157,7 @@ def set_background_color(choice):
     with open(json_file_path, "w") as file: json.dump(settings, file)
 
 def set_Image_quality(choice):
-    quality_map = {"最高畫質": "bestvideo[ext=mp4]+bestaudio/mp4", "1080p": "bestvideo[height<=1080]+bestaudio/mp4", "720p": "bestvideo[height<=720]+bestaudio/mp4", "480p": "bestvideo[height=<480]+bestaudio/mp4", "240p": "bestvideo[height<=240]+bestaudio/mp4", "144p": "bestvideo[height<=144]+bestaudio/mp4"}
+    quality_map = {"最高畫質": "bestvideo[ext=mp4]+bestaudio/mp4", "1080p": "bestvideo[height<=1080]+bestaudio/mp4", "720p": "bestvideo[height<=720]+bestaudio/mp4", "480p": "bestvideo[height<=480]+bestaudio/mp4", "240p": "bestvideo[height<=240]+bestaudio/mp4", "144p": "bestvideo[height<=144]+bestaudio/mp4"}
     settings["mp4"] = quality_map.get(choice, "bestvideo[ext=mp4]+bestaudio/mp4")
     with open(json_file_path, "w") as file: json.dump(settings, file)
 
@@ -278,9 +277,10 @@ def renew_choose_Check_value():
 
 
 class ToolTip:
-    """建立一個提示框，當滑鼠懸停在指定元件上時顯示提示內容"""
-    def __init__(self, widget):
+    """建立一個通用的提示框，可傳入字串或回呼函式"""
+    def __init__(self, widget, text_provider):
         self.widget = widget
+        self.text_provider = text_provider  # 可以是字串，也可以是一個 lambda 函式
         self.tipwindow = None
         self.id = None
         
@@ -289,7 +289,6 @@ class ToolTip:
         self.widget.bind("<Leave>", self.leave)
 
     def enter(self, event=None):
-        # 設置延遲
         self.schedule()
 
     def leave(self, event=None):
@@ -298,20 +297,20 @@ class ToolTip:
 
     def schedule(self):
         self.unschedule()
-        
         self.id = self.widget.after(50, self.showtip)
 
     def unschedule(self):
-        id = self.id
+        _id = self.id
         self.id = None
-        if id:
-            self.widget.after_cancel(id)
+        if _id:
+            self.widget.after_cancel(_id)
 
     def showtip(self, event=None):
-        "顯示提示框，並從全域變數獲取最新內容"
-        global settings
-        
-        text = f"目前下載位置:\n{settings["download_folder"]}"
+        # 判斷 text_provider 是字串還是函式，動態獲取內容
+        if callable(self.text_provider):
+            text = self.text_provider()
+        else:
+            text = self.text_provider
 
         if self.tipwindow or not text:
             return
@@ -319,10 +318,10 @@ class ToolTip:
         self.tipwindow = ctk.CTkToplevel(self.widget)
         self.tipwindow.wm_overrideredirect(True) 
         
-        x, y, cx, cy = self.widget.bbox("insert")
-        x = x + self.widget.winfo_rootx() 
-        y = y + cy + self.widget.winfo_rooty() + 10
-        self.tipwindow.wm_geometry("+%d+%d" % (x, y))
+        # 計算位置
+        x = self.widget.winfo_rootx()
+        y = self.widget.winfo_rooty() + self.widget.winfo_height() + 10
+        self.tipwindow.wm_geometry(f"+{x}+{y}")
 
         label = ctk.CTkLabel(self.tipwindow, text=text, justify="left", 
                              fg_color=("#3a3a3a", "#3a3a3a"), 
@@ -332,7 +331,6 @@ class ToolTip:
         label.pack(ipadx=1)
 
     def hidetip(self):
-        "隱藏提示框"
         tw = self.tipwindow
         self.tipwindow = None
         if tw:
@@ -498,6 +496,7 @@ if setting_button_icon:
     sett_button = ctk.CTkButton(root, text="", image=setting_button_icon, fg_color="transparent", hover_color="#99A19B", corner_radius=10, width=40, height=40, command=setepag)
 else:
     sett_button = ctk.CTkButton(root, text="=", corner_radius=10, width=40, height=40, command=setepag, font=("Arial", 20, "bold"))
+ToolTip(sett_button, "設定")
 sett_button.place(relx=0.9, rely=0.05)
 sett_menu_frame = ctk.CTkFrame(root, fg_color="transparent")
 sett_menu_frame_left = ctk.CTkFrame(sett_menu_frame, fg_color="transparent")
@@ -505,7 +504,8 @@ sett_menu_frame_right = ctk.CTkFrame(sett_menu_frame, fg_color="transparent")
 backgroundcolor_menu = ctk.CTkOptionMenu(sett_menu_frame_left, values=["系統", "深色", "淺色"], width=200, height=40, command=set_background_color, font=("Arial", 20, "bold"))
 changebutton = ctk.CTkButton(sett_menu_frame_left, text="選擇顏色", command=choose_color, width=200, height=40, font=("Arial", 20, "bold"))
 change_download_folder = ctk.CTkButton(sett_menu_frame_right, text="變更下載位置", command=select_download_folder, width=200, height=40, font=("Arial", 20, "bold"))
-ToolTip(change_download_folder) # 提示目前下載位置
+ToolTip(change_download_folder, lambda: f"目前下載位置:\n{settings['download_folder']}")
+
 status_var = ctk.StringVar(value=settings["check_button"])
 
 check_button = ctk.CTkCheckBox(
@@ -527,6 +527,7 @@ renew_check_button = ctk.CTkCheckBox(
     command=renew_choose_Check_value,
     font=("Arial", 16)
 )
+ToolTip(renew_check_button, "啟用後將於啟動時自動檢查新版本")
 
 # 功能頁
 previous_button = ctk.CTkButton(root, text="←", corner_radius=10, width=40, height=40, command=function, font=("Arial", 20, "bold"))
@@ -558,7 +559,9 @@ else:
     MENU_ACTIVE_BG = "#d9d9d9" # 懸停時的背景色
     MENU_ACTIVE_FG = "black"
 # 右鍵選單
-menu = tk.Menu(root, tearoff=0, 
+menu = tk.Menu(
+    root, 
+    tearoff=0, 
     bg=MENU_BG, 
     fg=MENU_FG, 
     activebackground=MENU_ACTIVE_BG, 
@@ -589,7 +592,7 @@ else:
 
 first_open = 1
 if settings["renew_check_button"] == "True":
-    renew(first_open, root)
+   check_for_updates(root, manual=False)
 
 
 
