@@ -10,7 +10,7 @@ import time
 import zipfile
 import shutil
 import hashlib
-import threading  # 引入多線程
+import threading  
 
 def resource_path(relative_path):
     if hasattr(sys, 'frozen'):
@@ -136,7 +136,7 @@ class Updater:
                 total = int(resp.headers.get('content-length', 0))
                 curr = 0
                 with open(save_path, "wb") as f:
-                    for chunk in resp.iter_content(8192):
+                    for chunk in resp.iter_content(131072):
                         if chunk:
                             f.write(chunk)
                             curr += len(chunk)
