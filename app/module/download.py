@@ -10,6 +10,39 @@ import webbrowser
 import json
 from urllib.parse import urlparse
 
+def resource_path(relative_path):
+    """取得資源的正確路徑（適用於開發和打包後的環境）"""
+    if hasattr(sys, 'frozen'):  # 如果是打包後的執行檔
+        base_path = sys._MEIPASS  # type: ignore
+    else:  # 如果是開發環境
+        base_path = os.path.abspath(".")
+    return os.path.join(base_path, relative_path)
+
+ico_path = resource_path("picture/yt.ico")
+
+# 先檢查系統 PATH 有沒有 node，沒有才加入打包的 bin/nodejs
+_node_exe_path = None
+
+def _setup_nodejs():
+    global _node_exe_path
+    import shutil
+    node = shutil.which("node")
+    if node:
+        _node_exe_path = node
+        print(f"使用系統 Node.js: {node}")
+        return
+    # 系統沒有，改用打包的 bin/nodejs
+    bundled = resource_path("bin/nodejs")
+    bundled_exe = os.path.join(bundled, "node.exe")
+    if os.path.exists(bundled_exe):
+        os.environ["PATH"] = bundled + os.pathsep + os.environ.get("PATH", "")
+        _node_exe_path = bundled_exe
+        print(f"使用內建 Node.js: {bundled_exe}")
+    else:
+        print("警告: 找不到 Node.js，部分影片格式可能無法下載")
+
+_setup_nodejs()
+
 main_view = None  # 用於儲存 main.py 的 root
 
 def set_main_view(root):
@@ -25,27 +58,41 @@ if os.path.exists(json_work_path):
 else:
     local_data = {}  # 如果沒有 renew.json，假設為空字典
 
+
 down_path = local_data.get("下載位置")
 
-cookie_txt_path = f"{down_path}\\cookie.txt"
+# cookie.txt 固定放在 renew.json 的下載位置（c:\Downloader）
+if down_path:
+    _cookie_dir = down_path
+elif hasattr(sys, 'frozen'):
+    _cookie_dir = os.path.dirname(sys.executable)
+else:
+    _cookie_dir = os.path.abspath(".")
 
+cookie_txt_path = os.path.join(_cookie_dir, "cookie.txt")
+if not os.path.exists(cookie_txt_path):
+    print(f"建立空的 cookie 檔案: {cookie_txt_path}")
+    with open(cookie_txt_path, "w", encoding="utf-8") as file:
+        file.write("# Netscape HTTP Cookie File\n") 
+
+
+def fix_cookie_file(path):
+    """移除 BOM 和 #HttpOnly_ 前綴，確保 yt-dlp 能正確讀取"""
+    try:
+        with open(path, "r", encoding="utf-8-sig") as f:
+            lines = f.readlines()
+        fixed = [line.replace("#HttpOnly_", "", 1) if line.startswith("#HttpOnly_") else line for line in lines]
+        with open(path, "w", encoding="utf-8", newline="\n") as f:
+            f.writelines(fixed)
+        print("cookie.txt 修復完成")
+    except Exception as e:
+        print(f"cookie.txt 修復失敗: {e}")
+
+
+print(f"cookie.txt 路徑: {cookie_txt_path}")
 if os.path.exists(cookie_txt_path):
     print("cookie.txt 存在")
-    cookies = cookie_txt_path
-else:
-    cookies = os.path.join(cookie_txt_path, "cookie.txt")
-    with open(cookies, "w") as file:
-        pass
-
-def resource_path(relative_path):
-    """取得資源的正確路徑（適用於開發和打包後的環境）"""
-    if hasattr(sys, 'frozen'):  # 如果是打包後的執行檔
-        base_path = sys._MEIPASS  # type: ignore
-    else:  # 如果是開發環境
-        base_path = os.path.abspath(".")
-    return os.path.join(base_path, relative_path)
-
-ico_path = resource_path("picture/yt.ico")
+    fix_cookie_file(cookie_txt_path)
 
 class DownloadProgressWindow(ctk.CTkToplevel):
     def __init__(self, parent):
@@ -54,8 +101,8 @@ class DownloadProgressWindow(ctk.CTkToplevel):
         self.title("下載進度")
         self.geometry("400x200")
         self.resizable(False, False)
-        self.iconbitmap(ico_path)
         self.protocol("WM_DELETE_WINDOW", self.on_close)
+        self.after(200, lambda: self.iconbitmap(ico_path) if os.path.exists(ico_path) else None)
         self.attributes("-topmost", True)
         self.scrollable_frame = ctk.CTkScrollableFrame(self, width=380, height=180, fg_color="transparent")
         self.scrollable_frame.pack(pady=10, padx=10)
@@ -112,10 +159,37 @@ def format_eta(eta_seconds):
         return f"{int(seconds)}秒"
 
 def show_error_message(e):
-    messagebox.showerror("錯誤", f"下載失敗: {str(e)}")
+    err = str(e)
+    if "cookies are no longer valid" in err or "cookies have been rotated" in err:
+        messagebox.showwarning("Cookie 已過期",
+            "您的 YouTube 登入憑證已過期，無法下載限制影片。\n\n"
+            "請重新匯出 cookie.txt：\n"
+            "1. 打開 Chrome 並登入 YouTube\n"
+            "2. 使用「Cookie-Editor」擴充功能匯出\n"
+            "3. 將新的 cookie.txt 放到程式資料夾中\n"
+            "4. 重新下載")
+        
+    elif "Sign in to confirm your age" in err:
+        messagebox.showwarning("需要登入驗證",
+            "此影片有年齡限制，需要提供有效的 cookie.txt 才能下載。\n\n"
+            "請確認 cookie.txt 是否存在且為最新版本。")
+        
+    elif "members only" in err.lower() or "member-only" in err.lower() or "joined" in err.lower():
+        messagebox.showwarning("會員限定影片",
+            "此影片為頻道會員限定內容。\n\n"
+            "需要您的帳號已加入該頻道會員，並重新匯出 cookie.txt：\n"
+            "1. 打開 Chrome，確認已加入該頻道會員\n"
+            "2. 使用「Cookie-Editor」擴充功能匯出\n"
+            "3. 將新的 cookie.txt 放到程式資料夾中\n"
+            "4. 重新下載")
+    else:
+        messagebox.showerror("錯誤", f"下載失敗: {err}")
 
-def show_success_message(url_box ,format_choice):
-    url = url_box.get()
+def show_success_message(url_box, format_choice):
+    try:
+        url = url_box.get() if url_box else ""
+    except Exception:
+        url = ""
     if is_youtube_channel_url(url):
         messagebox.showinfo("成功", "頻道下載完成！")
     elif 'playlist?' in url:
@@ -143,7 +217,10 @@ def download_video(url, format_choice, progress_window, on_complete_callback, ur
                 }],
                 'ffmpeg_location': ffmpeg_path,
                 'progress_hooks': [progress_hook(progress_window)],
-                "cookies": cookie_txt_path,
+                "cookiefile": cookie_txt_path,
+                'user_agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                'js_runtimes': {'node': {'path': _node_exe_path}} if _node_exe_path else {},
+                'extractor_args': {'youtube': {'player_client': ['tv']}},
                 'quiet': True
             }
         else:
@@ -152,11 +229,14 @@ def download_video(url, format_choice, progress_window, on_complete_callback, ur
                 'outtmpl': os.path.join(download_folder, '%(title)s.%(ext)s'),
                 'merge_output_format': 'mp4',
                 'restrictfilenames': False,
-                'ignoreerrors': True,  # 忽略下載錯誤，繼續下載下一個影片
+                'ignoreerrors': False,  # 忽略下載錯誤，繼續下載下一個影片
                 'ffmpeg_location': ffmpeg_path,
                 'progress_hooks': [progress_hook(progress_window)],
-                "cookies": cookie_txt_path,
-                'quiet': True
+                "cookiefile": cookie_txt_path,
+                'user_agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                'js_runtimes': {'node': {'path': _node_exe_path}} if _node_exe_path else {},
+                'extractor_args': {'youtube': {'player_client': ['tv']}},
+                'quiet': False
             }
 
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
@@ -164,7 +244,8 @@ def download_video(url, format_choice, progress_window, on_complete_callback, ur
 
         main_view.after(0, lambda: show_success_message(url_box, format_choice))
     except Exception as e:
-        main_view.after(0, lambda: show_error_message(e))
+        error_msg = str(e)
+        main_view.after(0, lambda: show_error_message(error_msg))
     finally:
         main_view.after(0, lambda: url_box.delete(0, END))
         main_view.after(0, progress_window.destroy)
@@ -187,7 +268,9 @@ def download_playlist(playlist_url, format_choice, progress_window, on_complete_
                 }],
                 'ffmpeg_location': ffmpeg_path,
                 'progress_hooks': [progress_hook(progress_window)], 
-                "cookies": cookie_txt_path,
+                "cookiefile": cookie_txt_path,
+                'js_runtimes': {'node': {'path': _node_exe_path}} if _node_exe_path else {},
+                'extractor_args': {'youtube': {'player_client': ['tv']}},
                 'quiet': True
             }
         else:
@@ -196,11 +279,14 @@ def download_playlist(playlist_url, format_choice, progress_window, on_complete_
                 'outtmpl': os.path.join(download_folder, '%(playlist)s', '%(title)s.%(ext)s'),
                 'merge_output_format': 'mp4',
                 'restrictfilenames': False,
-                'ignoreerrors': True,  # 忽略下載錯誤，繼續下載下一個影片
+                'ignoreerrors': False,  # 忽略下載錯誤，繼續下載下一個影片
                 'ffmpeg_location': ffmpeg_path,
                 'progress_hooks': [progress_hook(progress_window)],
-                "cookies": cookie_txt_path,
-                'quiet': True
+                'cookiefile': cookie_txt_path,
+                'user_agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                'js_runtimes': {'node': {'path': _node_exe_path}} if _node_exe_path else {},
+                'extractor_args': {'youtube': {'player_client': ['tv']}},
+                'quiet': False
             }
 
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
@@ -208,7 +294,8 @@ def download_playlist(playlist_url, format_choice, progress_window, on_complete_
 
         main_view.after(0, lambda: show_success_message(url_box, format_choice))
     except Exception as e:
-        main_view.after(0, lambda: show_error_message(e))
+        error_msg = str(e)
+        main_view.after(0, lambda: show_error_message(error_msg))
     finally:
         main_view.after(0, lambda: url_box.delete(0, END))
         main_view.after(0, progress_window.destroy)
@@ -236,7 +323,9 @@ def download_channel_videos(channel_url, format_choice, progress_window, on_comp
                 }],
                 'ffmpeg_location': ffmpeg_path,
                 'progress_hooks': [progress_hook(progress_window)],
-                "cookies": cookie_txt_path,
+                "cookiefile": cookie_txt_path,
+                'js_runtimes': {'node': {'path': _node_exe_path}} if _node_exe_path else {},
+                'extractor_args': {'youtube': {'player_client': ['tv']}},
                 'quiet': True,
                 'download_archive': archive_file_path 
             }
@@ -250,7 +339,9 @@ def download_channel_videos(channel_url, format_choice, progress_window, on_comp
                 'ignoreerrors': True,
                 'ffmpeg_location': ffmpeg_path,
                 'progress_hooks': [progress_hook(progress_window)],
-                "cookies": cookie_txt_path,
+                "cookiefile": cookie_txt_path,
+                'js_runtimes': {'node': {'path': _node_exe_path}} if _node_exe_path else {},
+                'extractor_args': {'youtube': {'player_client': ['tv']}},
                 'quiet': True,
                 'download_archive': archive_file_path 
             }
@@ -260,7 +351,8 @@ def download_channel_videos(channel_url, format_choice, progress_window, on_comp
 
         main_view.after(0, lambda: show_success_message(url_box, format_choice))
     except Exception as e:
-        main_view.after(0, lambda: show_error_message(e))
+        error_msg = str(e)
+        main_view.after(0, lambda: show_error_message(error_msg))
     finally:
         main_view.after(0, lambda: url_box.delete(0, END))
         main_view.after(0, progress_window.destroy)
@@ -341,7 +433,8 @@ def on_download_button_click(cook, url_box, dropdown_menu, ffmpeg_path, first_op
         if is_downloading:
             messagebox.showinfo("提示", "已有下載正在進行，請稍候完成後再試！")
             return
-
+        
+        fix_cookie_file(cookie_txt_path)
         url = url_box.get()
         format_choice = dropdown_menu.get()
 
@@ -364,7 +457,9 @@ def on_download_button_click(cook, url_box, dropdown_menu, ffmpeg_path, first_op
                 return
 
         if url:
+            cook.update()
             progress_window = DownloadProgressWindow(cook)
+            progress_window.update()
             is_downloading = True  # 標記下載中
 
             def on_complete_callback():  # 下載完成後重置狀態
