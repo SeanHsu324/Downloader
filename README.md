@@ -138,7 +138,9 @@ pip install -r requirements.txt
 - ⚠️ 請勿將 cookie.txt 分享給任何人
 - ⚠️ 本程式不會上傳或傳送 cookie，所有行為皆於本機執行
 - ⚠️ 即使為空白檔案，程式仍可正常執行
+
 需使用nodejs.exe並加入環境變數
+
 建立空白檔案：
 ```bash
 # Linux / macOS
