@@ -52,7 +52,7 @@
 
 - Windows 10 以上
 
-- Python 3.13（原始碼執行時）
+- Python 3.12（原始碼執行時）
 
 
 
@@ -90,7 +90,7 @@ cookie.txt 僅供本地使用，請勿分享給任何人
 
 https://sites.google.com/view/yt-to-dowload
 
-或 https://github.com/SeanHsu324/Setup
+或 Releases
 下載 DownloaderSetup.exe
 
 
