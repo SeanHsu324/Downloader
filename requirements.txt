@@ -1,6 +1,8 @@
-customtkinter==5.2.2
-docx2pdf==0.1.8
-pdf2docx==0.5.8
-pillow==11.3.0
-requests==2.32.4
-yt-dlp==2025.8.11
+customtkinter
+yt-dlp
+Pillow
+requests
+pyinstaller
+pdf2docx
+docx2pdf
+Cython
