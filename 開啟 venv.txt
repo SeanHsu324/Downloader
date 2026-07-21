@@ -1,0 +1,31 @@
+#建立環境
+python -m venv venv
+
+#同意執行環境
+Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
+
+#進入環境
+.\venv\Scripts\Activate
+
+#更新PIP(安裝模組)
+pip install --upgrade pip
+
+#安裝打包模組
+pip install pyinstaller 
+
+#匯出專案所有的套件
+python -m pip freeze > requirements.txt  
+
+#安裝模組
+pip install -U -r requirements.txt
+
+#更新yt-dlp
+pip install -U yt-dlp
+
+#(在虛擬環境中) 僅列出安裝在當前虛擬環境中的模組。
+pip list -l
+
+#編譯成pyd
+python setup.py build_ext
+
+pip install flask
