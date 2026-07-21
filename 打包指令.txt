@@ -7,5 +7,5 @@ pyinstaller --onedir --windowed --name "Downloader" --clean --icon="picture/yt.i
 
 
 #Updater.exe
-pyinstaller --onefile --windowed --name "Updater" --clean --icon="pt/ytd.ico" --add-data "pt;pt" --hidden-import=psutil rerenew_v2.py
+pyinstaller --onefile --windowed --name "Updater" --clean --icon="pt/ytd.ico" --add-data "pt;pt" --hidden-import=psutil Updater.py
 

@@ -27,5 +27,3 @@ pip list -l
 
 #編譯成pyd
 python setup.py build_ext
-
-pip install flask
