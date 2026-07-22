@@ -1,11 +1,6 @@
-#匯出專案所有的套件
-python -m pip freeze > requirements.txt  
-
-
 #Downloader.exe --onedir  --onefile
-pyinstaller --onedir --windowed --name "Downloader" --clean --icon="picture/yt.ico" --add-data "modules/*.pyd;modules" --add-data "picture;picture" --add-data "bin;bin" --hidden-import pdf2docx --hidden-import docx2pdf --hidden-import yt_dlp --hidden-import urllib.request main.py
+pyinstaller --onedir --windowed --name "Downloader" --clean --icon="picture/yt.ico" --add-data "modules/*.pyd;modules" --add-data "picture;picture" --add-data "bin;bin" --hidden-import pdf2docx --hidden-import docx2pdf --hidden-import yt_dlp --hidden-import urllib.request --hidden-import Pillow main.py
 
 
 #Updater.exe
 pyinstaller --onefile --windowed --name "Updater" --clean --icon="pt/ytd.ico" --add-data "pt;pt" --hidden-import=psutil Updater.py
-
