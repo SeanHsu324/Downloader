@@ -106,12 +106,29 @@ https://sites.google.com/view/yt-to-dowload
 ---
 
 ## 🐍 Python 原始碼版本
-請先安裝 Git再繼續
-> https://share.google/fTlNpMDKaDorZP4lt
-
 > ⚠️ 此方式 無法自動更新，需自行手動更新 .py 檔案
 
+安裝 Git
+> https://share.google/fTlNpMDKaDorZP4lt
 
+安裝Visual Studio
+>https://visualstudio.microsoft.com/zh-hant/visual-cpp-build-tools/
+
+勾選「使用 C++ 的桌面開發」 (Desktop development with C++)後按安裝 
+完成後重開 Visual Studio code
+
+下載node.js 放到"Downloader/nodsjs/"
+> https://nodejs.org/zh-tw/download
+
+需將nodejs.exe加入環境變數(下為教學影片)
+> https://drive.google.com/file/d/1DIcaG8Bd0rJ-_edpc0w6HeFnIPU4SUjs/view?usp=drive_link
+
+下載 FFmpeg 放到"Downloader/bin/ffmpeg/"：
+
+> https://github.com/SeanHsu324/FFmpeg/releases/download/v1.00/ffmpeg.rar
+
+
+在cmd或VScode 終端機中輸入:
 ```bash
 git clone https://github.com/SeanHsu324/Downloader.git
 cd Downloader
@@ -127,8 +144,10 @@ Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
 
 # 更新 pip 並安裝依賴
 pip install --upgrade pip
-pip install pyinstaller
 pip install -r requirements.txt
+
+#生成pyd
+python setup.py build_ext
 ```
 
 ---
@@ -138,12 +157,6 @@ pip install -r requirements.txt
 - ⚠️ 請勿將 cookie.txt 分享給任何人
 - ⚠️ 本程式不會上傳或傳送 cookie，所有行為皆於本機執行
 - ⚠️ 即使為空白檔案，程式仍可正常執行
-
-下載node.js
-> https://nodejs.org/zh-tw/download
-
-需使用nodejs.exe並加入環境變數
-> https://drive.google.com/file/d/1DIcaG8Bd0rJ-_edpc0w6HeFnIPU4SUjs/view?usp=drive_link
 
 建立空白檔案：
 ```bash
@@ -159,17 +172,6 @@ New-Item cookie.txt -ItemType File -Force
 
 ---
 
-#### 🎬 FFmpeg 下載
-
-請下載 FFmpeg 並與 main.py 放在同一資料夾：
-
-> https://github.com/SeanHsu324/FFmpeg/releases/download/v1.00/ffmpeg.rar
-
-
-
-
----
-
 #### 📁 建立更新資料夾（原始碼模式）
 
 在 C:\ 建立資料夾：
@@ -182,10 +184,19 @@ C:\downloadsitt
 {
     "檔案名稱": "Downloader.exe",
     "版本": "(自行填寫版本)",
-    "下載位置": "(main.py 所在資料夾路徑)"
+    "下載位置": "(main.py 所在資料夾路徑 如: C:\\Downloader"),
+    "最後更新時間": ""
 }
 
 ```
+---
+#### ▶️執行
+
+執行main.py
+```bush
+python main.py
+```
+
 ---
 
 ## 📖軟體教學和使用方法
