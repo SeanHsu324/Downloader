@@ -184,7 +184,7 @@ C:\downloadsitt
 {
     "檔案名稱": "Downloader.exe",
     "版本": "(自行填寫版本)",
-    "下載位置": "(main.py 所在資料夾路徑 如: C:\\Downloader"),
+    "下載位置": "(main.py 所在資料夾路徑 如: C:\\Downloader)",
     "最後更新時間": ""
 }
 
