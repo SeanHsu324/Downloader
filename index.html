@@ -105,6 +105,39 @@
   ::-webkit-scrollbar-thumb { background: #24252f; border-radius: 8px; border: 2px solid #07070b; }
   ::-webkit-scrollbar-thumb:hover { background: #34354a; }
 
+  /* 明確定義關鍵影格，不依賴 Tailwind CDN 的動態掃描產生
+     （若只在自訂 CSS 中以 animation: name 引用、卻從未在 HTML 出現對應的
+     animate-name class，Tailwind Play CDN 就不會產生該 @keyframes，
+     導致動畫「靜默失敗」，例如 .fade-section 永遠停在 opacity:0） */
+  @keyframes fadeUp {
+    0%   { opacity: 0; transform: translateY(24px); }
+    100% { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes shimmer {
+    0%   { background-position: -200% 0; }
+    100% { background-position: 200% 0; }
+  }
+  @keyframes spinSlow {
+    0%   { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+  }
+  @keyframes marquee {
+    0%   { transform: translateX(0); }
+    100% { transform: translateX(-50%); }
+  }
+  @keyframes pulseRing {
+    0%, 100% { opacity: 0.5; transform: scale(1); }
+    50%      { opacity: 1; transform: scale(1.03); }
+  }
+  @keyframes float1 {
+    0%, 100% { transform: translate(0,0) scale(1); }
+    50%      { transform: translate(40px,-30px) scale(1.08); }
+  }
+  @keyframes float2 {
+    0%, 100% { transform: translate(0,0) scale(1); }
+    50%      { transform: translate(-50px,30px) scale(1.05); }
+  }
+
   .grain {
     position: fixed; inset: 0; pointer-events: none; z-index: 60; opacity: 0.035; mix-blend-mode: overlay;
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
@@ -735,8 +768,8 @@
   // ======================================================
   // 請替換為您的 GitHub 帳號與儲存庫名稱
   // ======================================================
-  const USERNAME = 'SeanHsu324';
-  const REPO = 'Downloader';
+  const USERNAME = 'your-github-username';
+  const REPO = 'your-repo-name';
   // ======================================================
 
   // 安全呼叫 lucide.createIcons，避免 CDN 一時無法載入時讓整段 script 中斷
@@ -907,16 +940,27 @@
   });
 
   // ---------- Scroll reveal ----------
-  const revealObserver = new IntersectionObserver((entries) => {
-    entries.forEach(entry => {
-      if (entry.isIntersecting) {
-        entry.target.classList.add('in-view');
-        revealObserver.unobserve(entry.target);
-      }
-    });
-  }, { threshold: 0.15 });
+  try {
+    const revealObserver = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('in-view');
+          revealObserver.unobserve(entry.target);
+        }
+      });
+    }, { threshold: 0.1, rootMargin: '0px 0px -5% 0px' });
 
-  document.querySelectorAll('.fade-section').forEach(el => revealObserver.observe(el));
+    document.querySelectorAll('.fade-section').forEach(el => revealObserver.observe(el));
+  } catch (err) {
+    console.warn('IntersectionObserver 不可用，直接顯示所有內容：', err);
+    document.querySelectorAll('.fade-section').forEach(el => el.classList.add('in-view'));
+  }
+
+  // 保險：若因任何原因（罕見瀏覽器相容性問題等）動畫未觸發，
+  // 一段時間後強制顯示所有區塊內容，避免頁面長期空白
+  setTimeout(() => {
+    document.querySelectorAll('.fade-section:not(.in-view)').forEach(el => el.classList.add('in-view'));
+  }, 2500);
 
   // ---------- Card tilt on hover ----------
   document.querySelectorAll('.card-tilt').forEach(card => {
