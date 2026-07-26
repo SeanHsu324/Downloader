@@ -87,12 +87,15 @@ cookie.txt 僅供本地使用，請勿分享給任何人
 #### 📥 安裝步驟
 
 1. 前往
-
+2. 
+舊網站
 https://sites.google.com/view/yt-to-dowload
+
+新網站_bate
+https://seanhsu324.github.io/Downloader/
 
 或 Releases
 下載 DownloaderSetup.exe
-
 
 
 2. 解壓縮至任意資料夾
