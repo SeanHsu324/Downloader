@@ -1,258 +1,78 @@
-# Downloader
+# Downloader 下載器 — 免費、開源的 YouTube 影片下載工具
 
-## 📌 簡介
-
-> 下載影片工具
-支援 Shorts、單一影片、播放清單、整個頻道下載
-可大量下載，但短時間內下載 100 部以上影片可能會被暫時限制，通常隔天即可恢復（屬於平台行為）
-
-
-
+> **Downloader 下載器** 是一款免費、開源且無廣告的 YouTube 影片 / Shorts / 播放清單 / 頻道下載工具，支援最高畫質影像下載與高達 **192kHz / 32bit** 的高音質音訊提取[cite: 1]。
 
 ---
 
-## 📂 目錄
+## 🌟 特色功能 (Features)
 
-- [功能特色](#功能特色)
-
-- [系統需求](#系統需求)
-
-- [安裝方式](#%EF%B8%8F%E5%AE%89%E8%A3%9D%E6%96%B9%E5%BC%8F)
-
-- [軟體教學和使用方法](https://sites.google.com/view/yt-to-dowload/%E6%95%99%E5%AD%B8)
-
-- [程式碼分享](#程式碼分享)
-
-- [開發與貢獻](#%E2%80%8D%E9%96%8B%E7%99%BC%E8%88%87%E8%B2%A2%E7%8D%BB)
-
-- [授權](#授權)
-
-
+* **🎬 單一影片 / Shorts 下載**：貼上網址即可快速下載單支影片或 Shorts 短影音[cite: 1]。
+* **📋 播放清單下載**：自動排隊並批次下載整個 YouTube 播放清單內容[cite: 1]。
+* **📺 全頻道下載**：支援輸入頻道網址，一鍵下載頻道內所有已發布影片[cite: 1]。
+* **✨ 最高畫質影像**：自動解析並抓取來源提供之最高解析度影像（畫質不打折）[cite: 1]。
+* **🎵 192kHz / 32bit 高音質音訊**：完美保留原始音軌細節，適合音樂收藏與後製剪輯[cite: 1]。
+* **⚡ 不限速下載**：下載速度不設上限，完全發揮您的網路頻寬極限[cite: 1]。
+* **🛡️ 開源且永久免費**：採用 MIT 授權，程式碼完全透明、無廣告、無強制綁定安裝[cite: 1]。
 
 ---
 
-## ✨功能特色
+## 📖 操作教學 (Walkthrough)
 
-- 1️⃣ 免費！免費！免費！ 沒有下載次數限制
-- 2️⃣ 支援下載：
+簡單三步驟，輕鬆將影片儲存至本機：
 
- >Shorts, 
-單一影片, 
-播放清單, 
-整個頻道
-- 3️⃣ 介面簡單，沒有複雜設定
+1. **STEP 01 — 取得並貼上網址**：複製 YouTube 影片、Shorts、播放清單或頻道網址，貼入下載器的網址輸入欄[cite: 1]。
+2. **STEP 02 — 選擇畫質與音質**：依需求選擇欲下載的影片解析度，或切換為 192kHz / 32bit 音訊模式[cite: 1]。
+3. **STEP 03 — 開始下載**：點擊下載按鈕即可開始高速下載[cite: 1]。
 
-- 4️⃣ 可自由更換喜歡的顏色主題
-
-
+> 💡 **播放器推薦**：建議搭配 [PotPlayer（64 位元）](https://apps.microsoft.com/detail/xp8bsbgqw2dks0?hl=zh-TW&gl=HK) 播放器使用，以獲得最佳的影片播放相容性與畫質呈現[cite: 1]。
 
 ---
 
-## 💻系統需求
+## 🛡️ 安全性與注意事項 (Safety & Notes)
 
-- Windows 10 以上
+### 執行時出現「Windows SmartScreen 未知發行者」警告？
+由於申請程式簽章憑證需支付昂貴費用，本專案堅持**完全免費且無任何商業盈利**，因此未購買簽章憑證[cite: 1]。執行時若跳出 Windows 防護視窗：
+1. 點擊視窗中的 **「其他資訊」**[cite: 1]。
+2. 點擊 **「仍要執行」** 即可正常啟動程式[cite: 1]。
+3. 若仍有疑慮，歡迎直接參閱 GitHub 原始碼自行審查與編譯[cite: 1]。
 
-- Python 3.12（原始碼執行時）
-
-
-
----
-
-## 🛠️安裝方式
-
-### 🪟 Windows（推薦）
-
-#### 🔐 安全性說明
-
-> 本程式（.exe）在執行時，Windows 可能會顯示安全性警告。
-這是正常現象，原因在於本專案尚未進行「程式碼簽章（Code Signing）」。
-程式碼簽章需支付額外費用，為了能夠讓使用者免費下載與使用本工具，目前未辦理簽章，因此 Windows 可能會顯示未知來源的警告提示。
-本專案為開源專案，所有程式碼皆公開於 GitHub，可自行檢視。
-
-#### 🔒 隱私與資料安全
-
-> 本程式不會蒐集、上傳或傳送任何使用者資料
-所有下載與處理行為皆於本機端執行
-cookie.txt 僅供本地使用，請勿分享給任何人
-若您對安全性仍有疑慮，可自行從原始碼進行打包與執行。
-
-#### 📄 免責聲明 (Disclaimer)
-> 本專案僅供技術交流、學術研究及個人學習用途。
-用途限制：請勿將本工具用於下載受版權保護、未經授權的內容，或進行任何商業用途。
-服務條款：使用者在使用本工具時，應自行確保符合 YouTube 服務條款 以及所在地區的相關法律規定。
-法律責任：本專案開發者對於使用者因不當使用本工具而導致的任何法律問題、帳號封禁或損失，概不承擔任何責任。
+### Cookies 使用說明
+* 部分限制影片或進階下載功能可能需要設定 Cookies[cite: 1]。
+* 使用 Cookies 存在被 YouTube 平台限制帳號的潛在風險，建議使用**備用帳號（小帳）**登入操作[cite: 1]。
+* 不設定 Cookies 亦可下載大部分公開影片，唯部分功能可能受限[cite: 1]。
+* 請遵守 YouTube 社群規範與著作權相關規定[cite: 1]。
 
 ---
 
-#### 📥 安裝步驟
+## ❓ 常見問題 (FAQ)
 
-1. 前往
+<details>
+<summary><b>Q1: 為什麼需要設定 cookies？會不會有風險？</b></summary>
+<br>
+部分下載情境需要 cookies 才能正常運作，而使用 cookies 存在被 YouTube 限制帳號的可能性，因此建議使用小帳操作；不使用 cookies 也可以下載，但部分功能可能受限[cite: 1]。
+</details>
 
-https://sites.google.com/view/yt-to-dowload
+<details>
+<summary><b>Q2: 執行時跳出「未知發行者」警告怎麼辦？</b></summary>
+<br>
+因為程式簽章憑證需要付費，本軟體並未申請，因此 Windows 會顯示安全性提示[cite: 1]。點擊警告視窗中紅框標示的區域（其他資訊 → 仍要執行）即可繼續執行[cite: 1]。若仍有疑慮，歡迎至 GitHub 查看原始碼並自行打包[cite: 1]。
+</details>
 
-或 Releases
-下載 DownloaderSetup.exe
+<details>
+<summary><b>Q3: 支援哪些下載類型？</b></summary>
+<br>
+支援 Shorts 短片、單一影片、播放清單，以及整個頻道的批次下載，並提供最高畫質影像與 192kHz / 32bit 高音質音訊選項[cite: 1]。
+</details>
 
-
-
-2. 解壓縮至任意資料夾
-
-
-3. 雙擊 DownloaderSetup.exe，開始自動下載並安裝主程式
-
-
-
-
----
-
-## 🐍 Python 原始碼版本
-> ⚠️ 此方式 無法自動更新，需自行手動更新 .py 檔案
-
-安裝 Git
-> https://share.google/fTlNpMDKaDorZP4lt
-
-安裝Visual Studio
->https://visualstudio.microsoft.com/zh-hant/visual-cpp-build-tools/
-
-勾選「使用 C++ 的桌面開發」 (Desktop development with C++)後按安裝 
-完成後重開 Visual Studio code
-
-下載node.js 放到"Downloader/nodsjs/"
-> https://nodejs.org/zh-tw/download
-
-需將nodejs.exe加入環境變數(下為教學影片)
-> https://drive.google.com/file/d/1DIcaG8Bd0rJ-_edpc0w6HeFnIPU4SUjs/view?usp=drive_link
-
-下載 FFmpeg 放到"Downloader/bin/ffmpeg/"：
-
-> https://github.com/SeanHsu324/FFmpeg/releases/download/v1.00/ffmpeg.rar
-
-
-在cmd或VScode 終端機中輸入:
-```bash
-git clone https://github.com/SeanHsu324/Downloader.git
-cd Downloader
-
-# 建立虛擬環境
-python -m venv venv
-
-# 允許執行虛擬環境（PowerShell）
-Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
-
-# 啟動虛擬環境
-.\venv\Scripts\Activate
-
-# 更新 pip 並安裝依賴
-pip install --upgrade pip
-pip install -r requirements.txt
-
-#生成pyd
-python setup.py build_ext
-```
+<details>
+<summary><b>Q4: 推薦搭配哪個播放器使用？</b></summary>
+<br>
+建議搭配 PotPlayer（64 位元）播放器，能提供最佳的格式相容性與畫質呈現效果[cite: 1]。
+</details>
 
 ---
 
-#### 🍪 建立 cookie.txt（與 main.py 放在同一資料夾）
+## 📄 開源授權與免責聲明
 
-- ⚠️ 請勿將 cookie.txt 分享給任何人
-- ⚠️ 本程式不會上傳或傳送 cookie，所有行為皆於本機執行
-- ⚠️ 即使為空白檔案，程式仍可正常執行
-
-建立空白檔案：
-```bash
-# Linux / macOS
-touch cookie.txt
-
-# Windows CMD
-type nul > cookie.txt
-
-# Windows PowerShell
-New-Item cookie.txt -ItemType File -Force
-```
-
----
-
-#### 📁 建立更新資料夾（原始碼模式）
-
-在 C:\ 建立資料夾：
-
-C:\downloadsitt
-
-並建立 renew.json（避免錯誤，實際上不影響功能）：
-```json
-
-{
-    "檔案名稱": "Downloader.exe",
-    "版本": "(自行填寫版本)",
-    "下載位置": "(main.py 所在資料夾路徑 如: C:\\Downloader)",
-    "最後更新時間": ""
-}
-
-```
----
-#### ▶️執行
-
-執行main.py
-```bush
-python main.py
-```
-
----
-
-## 📖軟體教學和使用方法
-
-👉 https://sites.google.com/view/yt-to-dowload/%E6%95%99%E5%AD%B8
-
-
----
-
-## 💡程式碼分享
-
-#### 🎨 HEX 顏色變暗（按鈕 hover 效果）
-```python
-import colorsys
-
-def darken_color(color: str, percent: float):
-    color = color.lstrip("#")
-    r, g, b = int(color[0:2], 16), int(color[2:4], 16), int(color[4:6], 16)
-
-    h, l, s = colorsys.rgb_to_hls(r / 255, g / 255, b / 255)
-    l = max(0, l - (percent / 100))
-
-    r, g, b = colorsys.hls_to_rgb(h, l, s)
-    return f"#{int(r*255):02X}{int(g*255):02X}{int(b*255):02X}"
-```
-使用方式：
-```python
-darken_color("#80ff42", 20)
-
-```
----
-
-#### 🌗 判斷顏色是否為淺色（文字自動變黑 / 白）
-```python
-def is_light_color(hex_color):
-    hex_color = hex_color.lstrip('#')
-    r, g, b = int(hex_color[0:2], 16), int(hex_color[2:4], 16), int(hex_color[4:6], 16)
-    brightness = (r * 299 + g * 587 + b * 114) / 1000
-    return brightness > 127
-
-```
----
-
-## 👨‍💻開發與貢獻
->
-作者：[SeanHsu324](https://github.com/SeanHsu324)
-
-歡迎 Issue / PR / Fork
-
-
-
----
-
-## 📄授權
-
-本專案採用 [MIT License](LICENSE) 授權。
-你可以自由使用、修改與散布此程式碼。
-
-© 2025 [SeanHsu324](https://github.com/SeanHsu324)
+* **專案授權**：本專案採用 [MIT License](https://opensource.org/licenses/MIT) 開源授權[cite: 1]。
+* **免責聲明**：本軟體與 YouTube / Google 無任何官方關聯，僅供個人學習、研究與合理備份用途使用。請尊重內容創作者之智慧財產權[cite: 1]。
