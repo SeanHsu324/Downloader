@@ -20,7 +20,7 @@ def resource_path(relative_path):
 
 ico_path = resource_path("picture/yt.ico")
 
-# 先檢查系統 PATH 有沒有 node，沒有才加入打包的 bin/nodejs
+# 先檢查系統 PATH 有沒有 node，沒有才把打包的 ./bin/nodejs加入PATH 
 _node_exe_path = None
 
 def _setup_nodejs():
@@ -31,10 +31,12 @@ def _setup_nodejs():
         _node_exe_path = node
         print(f"使用系統 Node.js: {node}")
         return
+    
     # 系統沒有，改用打包的 bin/nodejs
-    bundled = resource_path("bin/nodejs")
+    bundled = resource_path("./bin/nodejs")
     bundled_exe = os.path.join(bundled, "node.exe")
     if os.path.exists(bundled_exe):
+        # 將 bin/nodejs 的目錄加入 PATH 優先順序中
         os.environ["PATH"] = bundled + os.pathsep + os.environ.get("PATH", "")
         _node_exe_path = bundled_exe
         print(f"使用內建 Node.js: {bundled_exe}")
@@ -220,7 +222,8 @@ def download_video(url, format_choice, progress_window, on_complete_callback, ur
                     "cookiefile": cookie_txt_path,
                     'user_agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
                     'js_runtimes': {'node': {'path': _node_exe_path}} if _node_exe_path else {},
-                    'extractor_args': {'youtube': {'player_client': ['tv']}},
+                    'extractor_args': {'youtube': {'player_client': ['mweb', 'ios', 'android']}},
+                    'remote_components': ['ejs:github'],
                     'quiet': True
                 }
             else:
@@ -250,7 +253,8 @@ def download_video(url, format_choice, progress_window, on_complete_callback, ur
                     "cookiefile": cookie_txt_path,
                     'user_agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
                     'js_runtimes': {'node': {'path': _node_exe_path}} if _node_exe_path else {},
-                    'extractor_args': {'youtube': {'player_client': ['tv']}},
+                    'extractor_args': {'youtube': {'player_client': ['mweb', 'ios', 'android']}},
+                    'remote_components': ['ejs:github'],
                     'quiet': False
                 }
             else:
@@ -296,7 +300,8 @@ def download_playlist(playlist_url, format_choice, progress_window, on_complete_
                     'progress_hooks': [progress_hook(progress_window)], 
                     "cookiefile": cookie_txt_path,
                     'js_runtimes': {'node': {'path': _node_exe_path}} if _node_exe_path else {},
-                    'extractor_args': {'youtube': {'player_client': ['tv']}},
+                    'extractor_args': {'youtube': {'player_client': ['mweb', 'ios', 'android']}},
+                    'remote_components': ['ejs:github'],
                     'quiet': True
                 }
             else:
@@ -326,7 +331,8 @@ def download_playlist(playlist_url, format_choice, progress_window, on_complete_
                     'cookiefile': cookie_txt_path,
                     'user_agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
                     'js_runtimes': {'node': {'path': _node_exe_path}} if _node_exe_path else {},
-                    'extractor_args': {'youtube': {'player_client': ['tv']}},
+                    'extractor_args': {'youtube': {'player_client': ['mweb', 'ios', 'android']}},
+                    'remote_components': ['ejs:github'],
                     'quiet': False
                 }
             else:
@@ -377,8 +383,9 @@ def download_channel_videos(channel_url, format_choice, progress_window, on_comp
                     'progress_hooks': [progress_hook(progress_window)],
                     "cookiefile": cookie_txt_path,
                     'js_runtimes': {'node': {'path': _node_exe_path}} if _node_exe_path else {},
-                    'extractor_args': {'youtube': {'player_client': ['tv']}},
-                    'quiet': True,
+                    'extractor_args': {'youtube': {'player_client': ['mweb', 'ios', 'android']}},
+                    'remote_components': ['ejs:github'],
+                    'quiet': False,
                     'download_archive': archive_file_path 
                 }
             else:
@@ -393,7 +400,7 @@ def download_channel_videos(channel_url, format_choice, progress_window, on_comp
                     'ffmpeg_location': ffmpeg_path,
                     'progress_hooks': [progress_hook(progress_window)],
                     "cookies": cookie_txt_path,
-                    'quiet': True,
+                    'quiet': False,
                     'download_archive': archive_file_path 
                 }
         else:
@@ -409,8 +416,9 @@ def download_channel_videos(channel_url, format_choice, progress_window, on_comp
                     'progress_hooks': [progress_hook(progress_window)],
                     "cookiefile": cookie_txt_path,
                     'js_runtimes': {'node': {'path': _node_exe_path}} if _node_exe_path else {},
-                    'extractor_args': {'youtube': {'player_client': ['tv']}},
-                    'quiet': True,
+                    'extractor_args': {'youtube': {'player_client': ['mweb', 'ios', 'android']}},
+                    'remote_components': ['ejs:github'],
+                    'quiet': False,
                     'download_archive': archive_file_path 
                 }
             else:
@@ -422,7 +430,7 @@ def download_channel_videos(channel_url, format_choice, progress_window, on_comp
                     'ffmpeg_location': ffmpeg_path,
                     'progress_hooks': [progress_hook(progress_window)],
                     "cookies": cookie_txt_path,
-                    'quiet': True,
+                    'quiet': False,
                     'download_archive': archive_file_path 
                 }
 
