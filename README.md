@@ -151,7 +151,7 @@ pip install --upgrade pip
 pip install -r requirements.txt
 
 #生成pyd
-python setup.py build_ext
+python py2pyd.py build_ext
 ```
 
 ---
