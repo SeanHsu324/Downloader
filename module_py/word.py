@@ -4,6 +4,26 @@ from tkinter import filedialog, messagebox
 from pdf2docx import Converter
 from docx2pdf import convert
 import threading
+
+try:
+    from .log import logger
+except ImportError:
+    logger = None
+
+
+def word_set_logger(log_instance):
+
+    global logger
+    logger = log_instance
+
+def log(message):
+    message_text = f"[word] {message}"
+    if logger:
+        logger.write_log(message_text)
+    else:
+        print(message_text)
+
+
 # PDF 轉 Word 函數
 def pdf_to_word(in_path, out_path, wordstart_button):
     if os.path.isdir(in_path):
@@ -21,11 +41,14 @@ def pdf_to_word(in_path, out_path, wordstart_button):
         messagebox.showerror("錯誤", "選擇的不是 PDF 文件！")
 
 def single_pdf_to_word(in_file, out_file):
+    log(f"開始 PDF 轉 Word: {in_file}")
     cv = Converter(in_file)
     try:
         cv.convert(out_file, start=0, end=None) # type: ignore
+        log(f"PDF 轉 Word 成功: {out_file}")
         messagebox.showinfo("成功", f"PDF 成功轉換為 Word：{out_file}")
     except Exception as e:
+        log(f"PDF 轉 Word 失敗: {e}")
         messagebox.showerror("錯誤", f"轉換過程中發生錯誤：{e}")
     finally:
         cv.close()
@@ -47,10 +70,13 @@ def word_to_pdf(in_path, out_path, wordstart_button):
         messagebox.showerror("錯誤", "選擇的不是 Word 文件！")
 
 def single_word_to_pdf(in_file, out_file):
+    log(f"開始 Word 轉 PDF: {in_file}")
     try:
         convert(in_file, out_file)
+        log(f"Word 轉 PDF 成功: {out_file}")
         messagebox.showinfo("成功", f"Word 成功轉換為 PDF：{out_file}")
     except Exception as e:
+        log(f"Word 轉 PDF 失敗: {e}")
         messagebox.showerror("錯誤", f"轉換過程中發生錯誤：{e}")
 
 # 瀏覽檔案按鈕動作
@@ -59,7 +85,7 @@ def browse_file(wordlabel, wordstart_button, first_open):
     
     if first_open != 1:
         first_open = 1
-        print(first_open)
+        log(first_open)
         return
     else:
         file_path = filedialog.askopenfilename(
@@ -76,7 +102,7 @@ def browse_folder(wordlabel,wordstart_button, first_open):
     
     if first_open != 1:
         first_open = 1
-        print(first_open)
+        log(first_open)
         return
     else:
         folder_path = filedialog.askdirectory(title="選擇資料夾")
@@ -89,19 +115,30 @@ def start_conversion(wordlabel, wordstart_button, first_open):
     wordstart_button.configure(state=ctk.DISABLED)  # 避免重複點擊
     if first_open != 1:
         first_open = 1
-        print(first_open)
+        log(first_open)
         return
+
+    if not file_path:
+        log("未選擇檔案，取消轉換")
+        messagebox.showerror("錯誤", "請先選擇檔案！")
+        return
+
+    if file_path.endswith(".pdf"):
+        out_file = os.path.dirname(file_path)
+        threading.Thread(
+            target=lambda: pdf_to_word(file_path, out_file, wordstart_button),
+            daemon=True,
+        ).start()
+        log(f"已建立 PDF 轉 Word 工作: {file_path}")
+        wordlabel.configure(text="轉換中")
+    elif file_path.endswith(".docx"):
+        out_file = os.path.dirname(file_path)
+        threading.Thread(
+            target=lambda: word_to_pdf(file_path, out_file, wordstart_button),
+            daemon=True,
+        ).start()
+        log(f"已建立 Word 轉 PDF 工作: {file_path}")
+        wordlabel.configure(text="轉換中")
     else:
-        if not file_path:
-            messagebox.showerror("錯誤", "請先選擇檔案！")
-            return
-        if file_path.endswith(".pdf"):
-            out_file = os.path.dirname(file_path)
-            threading.Thread(target=lambda: pdf_to_word(file_path, out_file, wordstart_button), daemon=True).start()
-            wordlabel.configure(text="轉換中")
-        elif file_path.endswith(".docx"):
-            out_file = os.path.dirname(file_path)
-            threading.Thread(target=lambda: word_to_pdf(file_path, out_file, wordstart_button), daemon=True).start()
-            wordlabel.configure(text="轉換中")
-        else:
-            messagebox.showerror("錯誤", "不支援的檔案類型！")
+        log(f"不支援的檔案類型: {file_path}")
+        messagebox.showerror("錯誤", "不支援的檔案類型！")
