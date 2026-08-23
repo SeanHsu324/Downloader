@@ -157,5 +157,5 @@ class LogManager:
             messagebox.showerror("錯誤", f"無法開啟檔案: {error}", parent=self.log_window)
 
 
-# 所有模組與 main.py 都應使用這個共用實例。
+# 所有模組與 main.py 都應使用這個
 logger = LogManager()

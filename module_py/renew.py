@@ -221,9 +221,9 @@ def show_update_dialog(root, version_info):
 
     dialog.grab_set()
 
-# ---------------------------------------------------------------------------
+
 # 外部工具更新：ffmpeg、Node.js、yt-dlp
-# ---------------------------------------------------------------------------
+
 TOOLS_BIN_FOLDER = "bin"
 TOOLS_STATE_FILE = "tool_versions.json"
 DENO_RELATIVE_PATH = os.path.join("deno", "deno.exe")

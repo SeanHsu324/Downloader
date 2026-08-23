@@ -117,7 +117,7 @@ def _run_external_yt_dlp(options, urls, progress_window):
     if not os.path.isfile(executable):
         raise FileNotFoundError(f"找不到外部 yt-dlp.exe: {executable}")
 
-    # 使用 yt-dlp 官方 progress template，避免從人類可讀文字猜測檔名與 ETA。
+    
     command = [executable, "--newline", "--progress", "--progress-template", "download:%(progress)j"]
     log(f"啟動外部 yt-dlp：網址數={len(urls)}，格式={options.get('format', '未指定')}，執行檔={executable}")
     option_map = {
@@ -534,14 +534,13 @@ class _OAuthOutput(io.StringIO):
 
         self.pending = (self.pending + value)[-4096:]
         text = self.pending
-        # pytubefix 的裝置驗證固定使用 Google device endpoint；不接受其他網址。
+        
         url = "https://www.google.com/device" if re.search(
             r"https?://(?:www\.)?google\.com/device\b", text, re.I
         ) else None
 
         code = None
-        # 只接受「input code <代碼>」或「verification code <代碼>」後的內容。
-        # 不再掃描整段輸出，避免把 AND-INPUT-CODE、PLEASE-OPEN 等提示當成驗證碼。
+        
         code_match = re.search(
             r"(?:input\s+code|verification\s+code|authorization\s+code)\s*[:：]?\s*"
             r"([A-Z0-9]{3,5}(?:[- ]+[A-Z0-9]{3,5}){2})(?![A-Za-z0-9])",
@@ -683,7 +682,7 @@ def _download_oauth_video(url, format_choice, progress_window, ffmpeg_path, down
 
 
 def _download_oauth_collection(url, format_choice, progress_window, ffmpeg_path, download_folder, collection_type):
-    """以 test.py 相同的 OAuth2 參數逐一下載清單或頻道影片。"""
+    
     log(f"OAuth2 開始處理{collection_type}：{url}")
     if collection_type == "playlist":
         if Playlist is None:
