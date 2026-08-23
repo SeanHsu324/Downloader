@@ -1,8 +1,10 @@
 customtkinter
-yt-dlp
 Pillow
 requests
 pyinstaller
 pdf2docx
 docx2pdf
 Cython
+cryptography
+pytubefix
+yt-dlp
