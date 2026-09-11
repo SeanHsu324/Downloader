@@ -112,6 +112,9 @@ cookie.txt 僅供本地使用，請勿分享給任何人
 ## 🐍 Python 原始碼版本
 > ⚠️ 此方式 無法自動更新，需自行手動更新 .py 檔案
 
+安裝VScode
+>https://code.visualstudio.com/download?_exp_download=fb315fc982
+
 安裝 python
 > https://www.python.org/downloads/windows/
 
