@@ -52,7 +52,7 @@
 
 - Windows 10 以上
 
-- Python 3.12（原始碼執行時）
+- Python 3.12.9（原始碼執行時）
 
 
 
@@ -111,6 +111,9 @@ cookie.txt 僅供本地使用，請勿分享給任何人
 
 ## 🐍 Python 原始碼版本
 > ⚠️ 此方式 無法自動更新，需自行手動更新 .py 檔案
+
+安裝 python
+> https://www.python.org/downloads/windows/
 
 安裝 Git
 > https://share.google/fTlNpMDKaDorZP4lt
