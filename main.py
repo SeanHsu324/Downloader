@@ -1,1108 +1,546 @@
-'''主程式視窗(啟動點)'''
-
-
-import colorsys
-import json
 import os
 import sys
+sys.stdout.reconfigure(encoding='utf-8', errors='replace')  # 避免繁中 Windows 主控台 (cp950) 印 emoji 時崩潰
+import time
 import threading
-import tkinter as tk
-import webbrowser
-from re import search
-from tkinter import colorchooser, filedialog, messagebox
 
-import customtkinter as ctk
-from PIL import Image
- 
-from modules.log import logger  # type: ignore
-from modules.download import on_download_button_click, set_main_view, download_set_logger # type: ignore
+import cv2
+import numpy as np
+import torch
 
-from modules.word import browse_file, browse_folder, start_conversion, word_set_logger # type: ignore
-from modules.mp4_to_mp3 import mp3, convert_mp4_to_mp3, mp34_set_logger # type: ignore
-from modules.renew import check_for_updates, renew_set_logger, check_tool_updates  # type: ignore
-
-
-
-
-download_set_logger(logger)
-word_set_logger(logger)
-mp34_set_logger(logger)
-renew_set_logger(logger)
-
-
-APP_TITLE = "Downloader"
-WINDOW_SIZE = "640x350"
-SPLASH_SIZE = (432, 102)
-SPLASH_DURATION_MS = 5000
-JSON_ENCODING = "utf-8"
-DEFAULT_DOWNLOAD_FOLDER = os.path.join(
-    os.path.expanduser("~"), "Desktop", "youtube下載"
+# 導入你提供的環境定義檔案
+from big_two_model import BigTwoA2C
+from agents import ModelAgent
+from action_space import get_action_mask_np, INDEX_TO_ACTION_VECTOR
+from big_two_core import evaluate_hand_np, compare_hands_np
+from robot_arm import RobotArm, HOME
+from config import (
+    AI_MODEL_PATH, COM_PORT, HAND_CAMERA_INDEX, PLAY_CAMERA_INDEX,
+    NUM_SLOTS, HAND_ROI, PLAY_ROI, PICK_NAME, DROP_NAME,
 )
-FONT_TITLE = ("Arial", 50, "bold")
-FONT_LARGE = ("Arial", 20, "bold")
-FONT_NORMAL = ("Arial", 16)
-BUTTON_RADIUS = 40
-PRIMARY_BUTTON_SIZE = (150, 150)
-SECONDARY_BUTTON_SIZE = (100, 100)
-CONTROL_SIZE = (200, 40)
-ICON_SIZE = (50, 45)
+from vision import (
+    Camera, GeminiCardReader, scan_hand, crop, draw_roi, put_text,
+    get_card_id, id_to_card_name, names_str,
+)
+
+# =====================================================
+# 1. 配置 (共用設定在 config.py：COM 埠、鏡頭編號、手牌分排、辨識區域)
+# =====================================================
+# --- 全自動：出牌區變化偵測 (決定何時才呼叫 Gemini) ---
+MOTION_THRESH = 4.0        # 相鄰兩幀平均差異 > 此值 = 有東西在動 (手伸進來)
+CHANGE_THRESH = 10.0       # 穩定後與上次基準差異 > 此值 = 桌面真的變了 -> 呼叫 Gemini
+STABLE_SEC = 1.0           # 畫面需靜止多久才判定放好牌了
+PASS_TIMEOUT_SEC = 15.0    # 對手回合出牌區這麼久沒變化 -> 視為 Pass (也可按 Space 手動 Pass)
+ARM_SETTLE_SEC = 1.0       # 手臂動作結束後等一下再重設基準畫面
+
+# 每打出一張牌要依序播放的動作，每張牌丟完都回初始點
+# 例: 第 5 格 -> pick_05 -> drop -> home
+CARD_ACTION_SEQUENCE = [PICK_NAME, DROP_NAME, HOME]
+
+# 訓練環境 (big_two_env.py) 中「對手剩餘牌數」是原始張數，沒有除以 13
+# 若你的 big_two_best.pth 是用除以 13 的版本訓練，改成 True
+NORMALIZE_OPP_COUNTS = False
+
+WINDOW = "BigTwo AI Live Control"
+HAND_WINDOW = "HAND CAM"
 
 
-def resource_path(relative_path: str) -> str:
-
-    """取得資源的正確路徑（適用於開發和打包後的環境）"""
-    base_path = getattr(sys, "_MEIPASS", os.path.abspath("."))
-    return os.path.join(base_path, relative_path)
-
-# --- 資源路徑 ---
-try:
-    picture_path = resource_path("picture/stary.png")
-    ico_path = resource_path("picture/yt.ico")
-    setting_white_path = resource_path("picture/setting_white.png")
-    setting_black_path = resource_path("picture/setting_black.png")
-    return_white_path = resource_path("picture/return_white.png")
-    return_black_path = resource_path("picture/return_black.png")
-    notify_white_path = resource_path("picture/notify_white.png")
-    notify_black_path = resource_path("picture/notify_black.png")
-except Exception as e:
-    logger.write_log(f"資源路徑載入失敗:{e}")
-
-# --- 核心修改：啟動畫面函式 ---
-def splash_screen(main_root):
-    """載入畫面，依附於主視窗。"""
-    splash = ctk.CTkToplevel(main_root)
-    splash.overrideredirect(True)
-    splash.attributes("-topmost", True)
-
-    # 載入圖片並保持參考，防止被垃圾回收。
-    try:
-        img = Image.open(picture_path)
-        img = img.resize(SPLASH_SIZE)
-        splash.splash_img_ref = ctk.CTkImage(img, size=SPLASH_SIZE)
-    except Exception as e:
-        error_msg = f"無法載入啟動畫面圖片: {e}"
-        print(error_msg)
-        logger.write_log(error_msg)
-        splash.splash_img_ref = None
-
-    # 設定視窗大小與位置。
-    win_width, win_height = SPLASH_SIZE
-    screen_width = splash.winfo_screenwidth()
-    screen_height = splash.winfo_screenheight()
-    x = (screen_width - win_width) // 2
-    y = (screen_height - win_height) // 2
-    splash.geometry(f"{win_width}x{win_height}+{x}+{y}")
-
-    if splash.splash_img_ref:
-        label = ctk.CTkLabel(splash, image=splash.splash_img_ref, text="")
-        label.pack()
-
-    def show_main_window():
-        """銷毀啟動畫面並顯示主視窗。"""
-        if splash.winfo_exists():
-            splash.destroy()
-        main_root.deiconify()
-
-    splash.after(SPLASH_DURATION_MS, show_main_window)
-    return splash
-
-# --- 核心修改：應用程式初始化流程 ---
-# 1. 建立整個應用程式唯一的根視窗
-root = ctk.CTk()
-# 2. 立即隱藏主視窗，直到啟動畫面結束
-root.withdraw()
-
-# --- 主視窗設定 ---
-root.geometry(WINDOW_SIZE)
-
-root.resizable(False, False)
-root.title(APP_TITLE)
-
-root.iconbitmap(ico_path)
-
-# 3. 啟動載入畫面，傳入唯一的 root
-splash = splash_screen(root)
-
-# --- 開始載入主程式其餘部分 ---
-threads = []
-first_open = 0
+def ids_to_vec(ids):
+    v = np.zeros(52, dtype=np.int8)
+    for c in ids: v[c-1] = 1
+    return v
 
 
-download_folder = DEFAULT_DOWNLOAD_FOLDER
+# =====================================================
+# 2. 出牌區變化偵測 (決定什麼時候才叫 Gemini)
+# =====================================================
+class PlayZoneWatcher:
+    def __init__(self):
+        self.baseline = None
+        self.prev = None
+        self.stable_since = None
+        self.last_motion_time = time.time()
 
+    @staticmethod
+    def _small(frame):
+        g = cv2.cvtColor(crop(frame, PLAY_ROI), cv2.COLOR_BGR2GRAY)
+        g = cv2.resize(g, (160, 90))
+        return cv2.GaussianBlur(g, (5, 5), 0).astype(np.float32)
 
-settings = {}
+    def rebaseline(self, frame):
+        self.baseline = self._small(frame)
+        self.prev = self.baseline
+        self.stable_since = None
+        self.last_motion_time = time.time()
 
-def log_message(message: str) -> None:
-    """同時輸出到終端與應用程式日誌。"""
-    print(message)
-    logger.write_log(message)
-
-
-def write_json_file(file_path: str, data: dict, label: str) -> bool:
-    """以 UTF-8、格式化且接近原子性的方式寫入 JSON 設定。"""
-    temporary_path = f"{file_path}.tmp"
-    try:
-        os.makedirs(os.path.dirname(file_path), exist_ok=True)
-        with open(temporary_path, "w", encoding=JSON_ENCODING) as file:
-            json.dump(data, file, ensure_ascii=False, indent=4)
-            file.write("\n")
-        os.replace(temporary_path, file_path)
-        return True
-    except (OSError, TypeError, ValueError) as error:
-        log_message(f"寫入 {label} 失敗: {error}")
-        try:
-            if os.path.exists(temporary_path):
-                os.remove(temporary_path)
-        except OSError:
-            pass
+    def update(self, frame):
+        """回傳 True 代表：出牌區有變化且已靜止，值得呼叫 Gemini"""
+        small = self._small(frame)
+        if self.baseline is None:
+            self.rebaseline(frame)
+            return False
+        motion = float(np.mean(np.abs(small - self.prev)))
+        self.prev = small
+        now = time.time()
+        if motion > MOTION_THRESH:
+            self.stable_since = None
+            self.last_motion_time = now
+            return False
+        if self.stable_since is None:
+            self.stable_since = now
+        if now - self.stable_since < STABLE_SEC:
+            return False
+        if float(np.mean(np.abs(small - self.baseline))) > CHANGE_THRESH:
+            self.baseline = small   # 不論辨識結果如何，同一個畫面只叫一次 Gemini
+            return True
         return False
 
-
-def load_json_with_defaults(file_path: str, defaults: dict, label: str) -> tuple[dict, bool]:
-    """讀取設定 JSON，補齊缺欄位並回傳是否需要回寫。"""
-    data = {}
-    needs_save = not os.path.exists(file_path)
-
-    if not needs_save:
-        try:
-            with open(file_path, "r", encoding=JSON_ENCODING) as file:
-                loaded_data = json.load(file)
-            if isinstance(loaded_data, dict):
-                data = loaded_data
-            else:
-                raise ValueError("JSON 根節點必須是物件")
-        except (OSError, json.JSONDecodeError, TypeError, ValueError) as error:
-            log_message(f"讀取 {label} 失敗，將重建預設檔: {error}")
-            needs_save = True
-
-    merged_data = defaults.copy()
-    merged_data.update(data)
-    if merged_data != data:
-        needs_save = True
-    return merged_data, needs_save
-
-
-def normalize_settings(data: dict, defaults: dict) -> bool:
-    """修復已存在但型別或值不合法的設定；未知欄位保持不變。"""
-    changed = False
-
-    def ensure_string(key: str) -> None:
-        nonlocal changed
-        value = data.get(key)
-        if not isinstance(value, str) or not value.strip():
-            data[key] = defaults[key]
-            changed = True
-
-    # 檢查背景主題
-    if data.get("background_color") not in {"Dark", "Light", "System"}:
-        data["background_color"] = defaults["background_color"]
-        changed = True
-
-    QUALITY_FORMAT_MIGRATIONS = {
-    "bestvideo[ext=mp4]+bestaudio/mp4": "bv*+ba/b",
-    "bestvideo[height<=1080]+bestaudio/mp4": "bv*[height<=1080]+ba/b",
-    "bestvideo[height<=720]+bestaudio/mp4": "bv*[height<=720]+ba/b",
-    "bestvideo[height<=480]+bestaudio/mp4": "bv*[height<=480]+ba/b",
-    "bestvideo[height<=240]+bestaudio/mp4": "bv*[height<=240]+ba/b",
-    "bestvideo[height<=144]+bestaudio/mp4": "bv*[height<=144]+ba/b",
-}
-
-    old_mp4 = data.get("mp4")
-    new_mp4 = QUALITY_FORMAT_MIGRATIONS.get(old_mp4)
-    if new_mp4 is not None and new_mp4 != old_mp4:
-        data["mp4"] = new_mp4
-        changed = True
-
-
-    if data.get("mp3") != "ba/best":
-        data["mp3"] = "ba/best"
-        changed = True    
-            
-    if data.get("oauth_check_button") == "True" :###未完成
-        data["oauth_check_button"] = "False"
-        changed = True 
-    for key in (
-        "subject_color",
-        "text_color",
-        "hover_color",
-        "download_folder",
-    ):
-        ensure_string(key)
-
-    # 檢查布林值字串欄位
-    for key in ("check_button", "renew_check_button"):
-        if data.get(key) not in {"True", "False"}:
-            data[key] = defaults[key]
-            changed = True
-
-    return changed
-
-
-def on_closing():
-    """關閉主視窗並結束程式。"""
-    root.destroy()
-    sys.exit()
-
-
-root.protocol("WM_DELETE_WINDOW", on_closing)
-set_main_view(root)
-
-
-####################   json   ####################
-work_path = r"c:\downloadsitt"
-json_work_path = os.path.join(work_path, "renew.json")
-
-if os.path.exists(json_work_path):
-    with open(json_work_path, "r", encoding="utf-8") as f:
-        local_data = json.load(f)
-else:
-    local_data = {}
-
-down_path = local_data.get("下載位置") or os.getcwd()
-
-if down_path == None:
-    try:
-        existing_data = {}
-        if os.path.exists(json_work_path):
-            with open(json_work_path, "r", encoding="utf-8") as f:
-                existing_data = json.load(f)
-        existing_data["下載位置"] = os.getcwd()
-
-        with open(json_work_path, "w", encoding="utf-8") as f:
-            json.dump(existing_data, f, indent=4, ensure_ascii=False)
-    except: pass
-
-
-ffmpeg_path = os.path.join(down_path, "bin/ffmpeg", "ffmpeg.exe")
-msg = f"FFmpeg 路徑: {ffmpeg_path}"
-print(msg)
-logger.write_log(msg)
-
-sett_path = down_path or os.getcwd()
-log_message(f"sett_path: {sett_path}")
-os.makedirs(sett_path, exist_ok=True)
-
-
-json_file_path = os.path.join(sett_path, "settings.json")
-default_settings = {
-    "background_color": "Dark",
-    "subject_color": "#478058",
-    "text_color": "black",
-    "hover_color": "#223E2A",
-    "mp4": "bv*+ba/b",
-    "mp3": "ba/best",
-    "download_folder": download_folder,
-    "check_button": "True",
-    "renew_check_button": "True",
-    "oauth_check_button": "False",
-}
-settings, settings_needs_save = load_json_with_defaults(
-    json_file_path, default_settings, "settings.json"
-)
-settings_needs_save = normalize_settings(settings, default_settings) or settings_needs_save
-if settings_needs_save:
-    write_json_file(json_file_path, settings, "settings.json")
-
-# 安全設定主題顏色。
-ctk.set_appearance_mode(settings.get("background_color", "Dark"))
-
-
-# --- 函式定義 ---
-
-def save_settings() -> bool:
-    """儲存目前設定；所有 UI 設定事件都應透過此函式寫入。"""
-    return write_json_file(json_file_path, settings, "settings.json")
-
-
-VIDEO_QUALITY_FORMATS = {
-    "最高畫質": "bv*+ba/b",
-    "1080p": "bv*[height<=1080]+ba/b",
-    "720p": "bv*[height<=720]+ba/b",
-    "480p": "bv*[height<=480]+ba/b",
-    "240p": "bv*[height<=240]+ba/b",
-    "144p": "bv*[height<=144]+ba/b",
-}
-
-BACKGROUND_MODES = {"深色": "Dark", "淺色": "Light", "系統": "System"}
-MENU_PALETTES = {
-    "Dark": {
-        "bg": "#2a2a2a",
-        "fg": "white",
-        "active_bg": "#3e3e3e",
-        "active_fg": "white",
-    },
-    "Light": {
-        "bg": "#f0f0f0",
-        "fg": "black",
-        "active_bg": "#d9d9d9",
-        "active_fg": "black",
-    },
-}
-
-
-def open_link_in_thread(url: str) -> None:
-
-    """
-    在一個獨立的執行緒中安全地開啟連結。
-    這可以避免 webbrowser 模組在主 Tkinter 執行緒中呼叫底層 OS API 
-    時可能發生的 GIL 衝突。
-    """
-    threading.Thread(target=lambda: webbrowser.open(url), daemon=True).start()
-
-
-def set_background_color(choice: str) -> None:
-    mode = BACKGROUND_MODES.get(choice)
-    if mode is None:
-        return
-    settings["background_color"] = mode
-    ctk.set_appearance_mode(mode)
-    save_settings()
-    if "menu" in globals():
-        apply_menu_style()
-
-
-def set_Image_quality(choice: str) -> None:
-    settings["mp4"] = VIDEO_QUALITY_FORMATS.get(
-        choice, VIDEO_QUALITY_FORMATS["最高畫質"]
-    )
-    save_settings()
-
-
-def on_format_change(choice: str) -> None:
-    is_disabled = choice in ("選擇格式", "mp3")
-    Image_quality_menu.configure(state="disabled" if is_disabled else "normal")
-    yt_button.configure(
-        state="disabled" if choice == "選擇格式" else "normal"
-    )
-
-
-def match_search(format_str: str) -> str:
-    match = search(r"height(?:<=|=)(\d+)", format_str)
-    return match.group(1) + "p" if match else "最高畫質"
-
-def open_link(url: str) -> None:
-    open_link_in_thread(url)
-
-
-def is_light_color(hex_color: str) -> bool:
-    hex_color = hex_color.lstrip("#")
-    r = int(hex_color[0:2], 16)
-    g = int(hex_color[2:4], 16)
-    b = int(hex_color[4:6], 16)
-    return (r * 299 + g * 587 + b * 114) / 1000 > 127
-
-def darken_color(color: str, percent: float):
-    color = color.lstrip("#")
-    r, g, b = int(color[0:2], 16), int(color[2:4], 16), int(color[4:6], 16)
-    h, l, s = colorsys.rgb_to_hls(r / 255, g / 255, b / 255)
-    l = max(0, l - (percent / 100))
-    r, g, b = colorsys.hls_to_rgb(h, l, s)
-    return f"#{int(r * 255):02X}{int(g * 255):02X}{int(b * 255):02X}"
-
-def choose_color() -> None:
-    color_code = colorchooser.askcolor()[1]
-    if not color_code:
-        return
-    settings["subject_color"] = color_code
-    settings["text_color"] = "black" if is_light_color(color_code) else "white"
-    settings["hover_color"] = darken_color(color_code, 20)
-    save_settings()
-    load()
-
-
-def load() -> None:
-    """把設定套用到主題、下拉選單及所有主要控制項。"""
-    background_mode = settings.get("background_color", "System")
-    backgroundcolor_menu.set(
-        {value: key for key, value in BACKGROUND_MODES.items()}.get(
-            background_mode, "系統"
-        )
-    )
-    ctk.set_appearance_mode(background_mode)
-    Image_quality_menu.set(match_search(settings.get("mp4", "")))
-
-    items = [
-        dropdown_menu,
-        Image_quality_menu,
-        backgroundcolor_menu,
-        wordlabel,
-        mp3label,
-    ]
-    buttons = [
-        loadbutton,
-        backbutton,
-        home_button,
-        previous_button,
-        wordbutton,
-        wordstart_button,
-        changebutton,
-        change_download_folder,
-        log_button,
-        wordbrowse_folder_button,
-        wordbrowse_file_button,
-        mp3start_button,
-        mp3browse_button,
-        mp4_to_mp3button,
-        yt_button,
-    ]
-
-    fg_color = settings.get("subject_color", default_settings["subject_color"])
-    text_color = settings.get("text_color", default_settings["text_color"])
-    hover_color = settings.get("hover_color", default_settings["hover_color"])
-
-    for component in items:
-        component.configure(fg_color=fg_color, text_color=text_color)
-    for button in buttons:
-        button.configure(
-            fg_color=fg_color,
-            text_color=text_color,
-            hover_color=hover_color,
-        )
-
-    root.bind("<Button-3>", show_fuontion_menu)
-
-def paste_text():
-    try: url_box.insert(tk.END, root.clipboard_get())
-    except tk.TclError: pass
-
-def cut_text():
-    try:
-        root.clipboard_clear()
-        root.clipboard_append(url_box.selection_get())
-        url_box.delete("sel.first", "sel.last")
-    except tk.TclError: pass
-
-def select_all():
-    url_box.select_range(0, tk.END)
-    url_box.icursor(tk.END)
-
-def show_context_menu(event): menu.post(event.x_root, event.y_root)
-
-
-def teaching() -> None:
-    open_link_in_thread(
-        "https://sites.google.com/view/yt-to-dowload/%E6%95%99%E5%AD%B8/%E6%95%99%E5%AD%B8"
-    )
-
-
-oauth_info_window = None
-
-
-def show_oauth_info_window() -> None:
-    global oauth_info_window
-    if oauth_info_window is not None and oauth_info_window.winfo_exists():
-        oauth_info_window.deiconify()
-        oauth_info_window.lift()
-        oauth_info_window.focus_force()
-        return
-
-    oauth_info_window = ctk.CTkToplevel(root)
-    info_window = oauth_info_window
-    info_window.title("OAuth2 裝置驗證說明")
-    info_window.geometry("520x300")
-    info_window.resizable(False, False)
-    info_window.transient(root)
-    info_window.lift()
-    info_window.focus_force()
-    ctk.CTkLabel(
-        info_window,
-        text="OAuth2 裝置驗證說明",
-        font=("Arial", 22, "bold"),
-    ).pack(pady=(20, 10))
-    ctk.CTkLabel(
-        info_window,
-        text=(
-            "OAuth2 只會授權目前下載所需的 YouTube 存取權，\n"
-            "本程式不會要求或接觸您的帳號密碼。\n\n"
-            "此模式適合需要登入驗證的限制影片；請避免大量或連續下載，\n"
-            "以降低觸發 YouTube 風控或帳號限制的風險。建議使用非主要帳號。"
-        ),
-        justify="left",
-        wraplength=450,
-    ).pack(padx=24, pady=10)
-    ctk.CTkButton(
-        info_window, text="關閉", width=110, command=info_window.destroy
-    ).pack(pady=12)
-
-
-def teaching_2() -> None:
-    show_oauth_info_window()
-
-
-def teaching_3() -> None:
-    open_link_in_thread("https://sites.google.com/view/yt-to-dowload/教學/取得網址")
-
-
-def show_fuontion_menu(event) -> None:
-    fuontionmenu.post(event.x_root, event.y_root)
-
-
-def select_download_folder() -> None:
-    folder = filedialog.askdirectory(
-        title="變更下載位置",
-        initialdir=settings.get("download_folder", download_folder),
-    )
-    if folder:
-        settings["download_folder"] = folder
-        save_settings()
-
-
-def choose_Check_value() -> None:
-    settings["check_button"] = status_var.get()
-    save_settings()
-
-
-def renew_choose_Check_value() -> None:
-    current_value = settings.get("renew_check_button", "True")
-    new_value = renew_status_var.get()
-
-    if current_value == "True" and new_value == "False":
-        confirmed = messagebox.askyesno(
-            title="操作確認",
-            message="確定關閉「檢查更新」嗎？\n這可能會導致您錯過重要的軟體更新。",
-        )
-        if not confirmed:
-            renew_status_var.set(current_value)
-            return
-
-    settings["renew_check_button"] = new_value
-    save_settings()
-
-
-def oauth_choose_Check_value() -> None:
-    new_value = oauth_status_var.get()
-    settings["oauth_check_button"] = new_value
-    save_settings()
-
-
-class ToolTip:
-    """建立一個通用的提示框，可傳入字串或回呼函式"""
-    def __init__(self, widget, text_provider):
-        self.widget = widget
-        self.text_provider = text_provider  # 可以是字串，也可以是一個 lambda 函式
-        self.tipwindow = None
-        self.id = None
-        
-        # 綁定滑鼠事件
-        self.widget.bind("<Enter>", self.enter)
-        self.widget.bind("<Leave>", self.leave)
-
-    def enter(self, event=None):
-        self.schedule()
-
-    def leave(self, event=None):
-        self.unschedule()
-        self.hidetip()
-
-    def schedule(self):
-        self.unschedule()
-        self.id = self.widget.after(50, self.showtip)
-
-    def unschedule(self):
-        _id = self.id
-        self.id = None
-        if _id:
-            self.widget.after_cancel(_id)
-
-    def showtip(self, event=None):
-        # 判斷 text_provider 是字串還是函式，動態獲取內容
-        if callable(self.text_provider):
-            text = self.text_provider()
+    def idle_seconds(self):
+        return time.time() - self.last_motion_time
+
+
+# =====================================================
+# 3. 遊戲狀態
+# =====================================================
+class BigTwoGame:
+    def __init__(self, agent):
+        self.agent = agent
+        self.reset()
+
+    def reset(self):
+        # 夾取位置對應: slot(1~13) -> card_id；牌被夾走後該格設為 None
+        self.slots = {i: None for i in range(1, NUM_SLOTS + 1)}
+        self.last_played_cards = set()
+        self.played_history = set()   # 整局已出現在桌上的牌 (用來從出牌區找出「新」的牌)
+        self.others_count = [13, 13, 13]
+        self.current_turn_player = 0  # 0: P1(自己), 1: P2, 2: P3, 3: P4
+        self.last_action_player = 0
+        self.pass_count = 0
+        self.is_new_round = True
+        self.game_started = False
+        self.game_over = False
+        self.turn_started_at = time.time()
+
+    # --- 查詢 ---
+    @property
+    def hand_locked(self):
+        return any(c is not None for c in self.slots.values())
+
+    def hand_cards(self):
+        return {c for c in self.slots.values() if c is not None}
+
+    def slot_of(self, card_id):
+        for s, c in self.slots.items():
+            if c == card_id:
+                return s
+        return None
+
+    # --- 狀態轉移 ---
+    def _next_turn(self, player):
+        self.current_turn_player = player
+        self.turn_started_at = time.time()
+
+    def lock_hand(self, ids, first_player=None):
+        self.slots = {i + 1: cid for i, cid in enumerate(ids)}
+        if 1 in ids:
+            self._next_turn(0)
+        elif first_player is not None:
+            self._next_turn(first_player)
+
+    def _register_pass(self, who):
+        self.pass_count += 1
+        print(f"[系統] P{who+1} Pass，累計 Pass: {self.pass_count}")
+        if self.pass_count >= 3:
+            self.is_new_round = True
+            self.last_played_cards.clear()
+            self.pass_count = 0
+            self._next_turn(self.last_action_player)
+            print(f"[系統] 三人 Pass，新回合。輪到 P{self.current_turn_player+1}")
         else:
-            text = self.text_provider
+            self._next_turn((who + 1) % 4)
 
-        if self.tipwindow or not text:
+    def opponent_pass(self):
+        self._register_pass(self.current_turn_player)
+
+    def is_legal_play(self, ids):
+        vec = ids_to_vec(ids)
+        hand_type, _ = evaluate_hand_np(vec)
+        if hand_type == 0:
+            return False
+        if not self.last_played_cards:
+            return True
+        return compare_hands_np(vec, ids_to_vec(self.last_played_cards)) == 1
+
+    def opponent_play(self, ids):
+        p = self.current_turn_player
+        self.others_count[p - 1] -= len(ids)
+        self.last_played_cards = set(ids)
+        self.played_history |= set(ids)
+        self.is_new_round = False
+        self.game_started = True
+        self.pass_count = 0
+        self.last_action_player = p
+        print(f"[系統] P{p+1} 打出 {names_str(ids)}，剩 {self.others_count[p-1]} 張")
+        if self.others_count[p - 1] <= 0:
+            self.game_over = True
+            print(f"[系統] P{p+1} 出完牌，遊戲結束")
             return
-        
-        self.tipwindow = ctk.CTkToplevel(self.widget)
-        self.tipwindow.wm_overrideredirect(True) 
-        
-        # 計算位置
-        x = self.widget.winfo_rootx()
-        y = self.widget.winfo_rooty() + self.widget.winfo_height() + 10
-        self.tipwindow.wm_geometry(f"+{x}+{y}")
-
-        label = ctk.CTkLabel(self.tipwindow, text=text, justify="left", 
-                             fg_color=("#3a3a3a", "#3a3a3a"), 
-                             text_color="white", 
-                             corner_radius=5,
-                             padx=10, pady=5)
-        label.pack(ipadx=1)
-
-    def hidetip(self):
-        tw = self.tipwindow
-        self.tipwindow = None
-        if tw:
-            tw.destroy()
-
-# --- 頁面切換函式 ---
-PAGE_WIDGETS = []
-SETTING_PAGE_WIDGETS = []
-
-
-def _hide_widget(widget) -> None:
-    """按照元件目前使用的 geometry manager 隱藏元件。"""
-    manager = widget.winfo_manager()
-    if manager == "pack":
-        widget.pack_forget()
-    elif manager == "place":
-        widget.place_forget()
-    elif manager == "grid":
-        widget.grid_forget()
-
-
-def _hide_widgets(widgets) -> None:
-    """按照子元件到外層容器的順序隱藏一組元件。"""
-    for widget in reversed(widgets):
-        _hide_widget(widget)
-
-
-def _hide_all_pages() -> None:
-    """每次切換頁面前，統一隱藏已註冊的頁面元件。"""
-    _hide_widgets(PAGE_WIDGETS)
-
-
-def _hide_navigation(*widgets):
-    """隱藏指定的頂部導覽按鈕。"""
-    for widget in widgets:
-        _hide_widget(widget)
-
-
-def ytdownload():
-    """下載頁：只負責設定下載頁的綁定與元件位置。"""
-    _hide_all_pages()
-    _hide_navigation(sett_button, previous_button)
-
-    root.bind("<Button-3>", show_fuontion_menu)
-    url_box.bind("<Button-3>", show_context_menu)
-    url_box.focus_set()
-
-    home_button.place(relx=0.05, rely=0.05)
-    url_box.pack(pady=(50, 10))
-    menu_frame.pack(pady=(20, 20))
-    dropdown_menu.pack(side="left", padx=10)
-    Image_quality_menu.pack(side="left", padx=10)
-    yt_button.pack(pady=(20, 10))
-
-
-def backhomepag():
-    """主頁：顯示主要功能按鈕。"""
-    _hide_all_pages()
-    # 設定頁含有巢狀 pack 容器，額外明確收起一次以避免切回主頁時殘留。
-    _hide_widgets(SETTING_PAGE_WIDGETS)
-    _hide_navigation(home_button, previous_button)
-
-    root.bind("<Button-3>", show_fuontion_menu)
-    url_box.unbind("<Button-3>")
-    root.focus()
-
-    text_label.pack(pady=(20, 10))
-    button_frame.pack(expand=True)
-    loadbutton.pack(side="left", padx=20)
-    backbutton.pack(side="left", padx=20)
-    sett_button.place(relx=0.9, rely=0.05)
-
-
-def setepag():
-    """設定頁：顯示原有設定元件，位置與參數維持不變。"""
-    _hide_all_pages()
-    _hide_navigation(sett_button, previous_button)
-
-    root.unbind("<Button-3>")
-    url_box.unbind("<Button-3>")
-    root.focus()
-
-    home_button.place(relx=0.05, rely=0.05)
-    sett_menu_frame.pack(expand=True, fill="both", padx=20, pady=(50, 20))
-    sett_menu_frame_left.pack(side="left", expand=True, fill="both")
-    sett_menu_frame_right.pack(side="right", expand=True, fill="both")
-    backgroundcolor_menu.pack(side="top", anchor="w", padx=40, pady=(20, 20))
-    changebutton.pack(side="top", anchor="w", padx=40, pady=(10, 20))
-    log_button.pack(side="top", anchor="w", padx=40, pady=(10, 10))
-    change_download_folder.pack(side="top", anchor="w", pady=(20, 20))
-    check_button.pack(side="top", anchor="w", pady=(10, 20))
-    renew_check_button.pack(side="top", anchor="w", pady=(10, 20))
-    oauth_check_button.pack(side="top", anchor="w", pady=(10, 10))
-   
-
-
-def function():
-    """其他功能頁：顯示 Word/PDF 與 MP4/MP3 功能按鈕。"""
-    _hide_all_pages()
-    _hide_navigation(sett_button, previous_button)
-
-    root.unbind("<Button-3>")
-    url_box.unbind("<Button-3>")
-    function_frame.pack(expand=True)
-    wordbutton.pack(side="left", padx=20)
-    mp4_to_mp3button.pack(side="left", padx=20)
-    home_button.place(relx=0.05, rely=0.05)
-
-
-def word():
-    """Word/PDF 轉換頁：由其他功能頁的 wordbutton 呼叫。"""
-    _hide_all_pages()
-    _hide_navigation(home_button, sett_button)
-
-    root.bind("<Button-3>", show_fuontion_menu)
-    url_box.unbind("<Button-3>")
-    previous_button.place(relx=0.05, rely=0.05)
-    wordlabel.pack(pady=(50, 10))
-    wordbrowse_folder_button.pack(pady=20)
-    wordbrowse_file_button.pack(pady=20)
-    wordstart_button.pack(pady=20)
-
-
-def mp3_page():
-    """MP4 轉 MP3 頁：由其他功能頁的 mp4_to_mp3button 呼叫。"""
-    _hide_all_pages()
-    _hide_navigation(home_button, sett_button)
-
-    root.bind("<Button-3>", show_fuontion_menu)
-    url_box.unbind("<Button-3>")
-    previous_button.place(relx=0.05, rely=0.05)
-    mp3label.pack(pady=(50, 20))
-    mp3browse_button.pack(pady=10)
-    mp3start_button.pack(pady=20)
-
-
-# 每個頁面都由自己的 def 負責顯示；按鈕 command 維持原本的函式名稱。
-# backhomepag()、ytdownload()、function()、setepag()、word()、mp3_page()
-# 皆可直接被其他元件或程式流程呼叫。
-
-# --- UI 元件建立 ---
-
-# 主頁
-text_label = ctk.CTkLabel(
-    root, text="選擇功能", font=FONT_TITLE, fg_color="transparent"
-)
-
-text_label.pack(pady=(20, 10))
-button_frame = ctk.CTkFrame(root, fg_color="transparent")
-button_frame.pack(expand=True)
-loadbutton = ctk.CTkButton(
-    button_frame,
-    text="下載\nYouTube",
-    command=ytdownload,
-    width=PRIMARY_BUTTON_SIZE[0],
-    height=PRIMARY_BUTTON_SIZE[1],
-    corner_radius=BUTTON_RADIUS,
-    font=FONT_LARGE,
-)
-loadbutton.pack(side="left", padx=20)
-backbutton = ctk.CTkButton(
-    button_frame,
-    text="其他功能",
-    command=function,
-    width=PRIMARY_BUTTON_SIZE[0],
-    height=PRIMARY_BUTTON_SIZE[1],
-    corner_radius=BUTTON_RADIUS,
-    font=FONT_LARGE,
-)
-
-backbutton.pack(side="left", padx=20)
-
-# 下載頁
-url_box = ctk.CTkEntry(
-    root,
-    placeholder_text="輸入網址",
-    width=300,
-    height=50,
-    fg_color="transparent",
-    font=FONT_LARGE,
-)
-menu_frame = ctk.CTkFrame(root, fg_color="transparent")
-dropdown_menu = ctk.CTkOptionMenu(
-    menu_frame,
-    values=["選擇格式", "mp4", "mp3"],
-    command=on_format_change,
-    width=CONTROL_SIZE[0],
-    height=CONTROL_SIZE[1],
-    font=FONT_LARGE,
-)
-
-dropdown_menu.set("選擇格式")
-Image_quality_menu = ctk.CTkOptionMenu(
-    menu_frame,
-    values=list(VIDEO_QUALITY_FORMATS),
-    command=set_Image_quality,
-    width=CONTROL_SIZE[0],
-    height=CONTROL_SIZE[1],
-    font=FONT_LARGE,
-)
-
-Image_quality_menu.configure(state="disabled")
-yt_button = ctk.CTkButton(
-    root,
-    text="開始下載",
-    width=100,
-    height=40,
-    corner_radius=BUTTON_RADIUS,
-    command=lambda: on_download_button_click(
-        root,
-        url_box,
-        dropdown_menu,
-        ffmpeg_path,
-        first_open,
-        settings["mp3"],
-        settings["mp4"],
-        settings["download_folder"],
-        settings["check_button"],
-        settings["oauth_check_button"],
-    ),
-    font=FONT_LARGE,
-)
-
-yt_button.configure(state="disabled")
-home_button = ctk.CTkButton(
-    root,
-    text="首頁",
-    corner_radius=10,
-    width=55,
-    height=40,
-    command=backhomepag,
-    font=FONT_LARGE,
-)
-
-# 設定頁
-try:
-    root.setting_pil_image_black = Image.open(setting_black_path)
-    root.setting_pil_image_white = Image.open(setting_white_path)
-
-    msg = "圖片載入成功!"
-    print(msg)
-    logger.write_log(msg)
-
-    setting_button_icon = ctk.CTkImage(
-        dark_image=root.setting_pil_image_white,
-        light_image=root.setting_pil_image_black,
-        size=ICON_SIZE,
-    )
-
-except Exception as e:
-    error_msg = f"載入設定圖示時發生錯誤: {e}"
-    print(error_msg)
-    logger.write_log(error_msg)
-
-    setting_button_icon = None
-
-if setting_button_icon:
-    sett_button = ctk.CTkButton(
-        root,
-        text="",
-        image=setting_button_icon,
-        fg_color="transparent",
-        hover_color="#99A19B",
-        corner_radius=10,
-        width=40,
-        height=40,
-        command=setepag,
-    )
-else:
-    sett_button = ctk.CTkButton(
-        root,
-        text="設定",
-        corner_radius=10,
-        width=60,
-        height=40,
-        command=setepag,
-        font=FONT_NORMAL,
-    )
-
-ToolTip(sett_button, "設定")
-sett_button.place(relx=0.9, rely=0.05)
-sett_menu_frame = ctk.CTkFrame(root, fg_color="transparent")
-
-sett_menu_frame_left = ctk.CTkFrame(sett_menu_frame, fg_color="transparent")
-sett_menu_frame_right = ctk.CTkFrame(sett_menu_frame, fg_color="transparent")
-backgroundcolor_menu = ctk.CTkOptionMenu(
-    sett_menu_frame_left,
-    values=list(BACKGROUND_MODES),
-    width=CONTROL_SIZE[0],
-    height=CONTROL_SIZE[1],
-    command=set_background_color,
-    font=FONT_LARGE,
-)
-changebutton = ctk.CTkButton(
-    sett_menu_frame_left,
-    text="選擇顏色",
-    command=choose_color,
-    width=CONTROL_SIZE[0],
-    height=CONTROL_SIZE[1],
-    font=FONT_LARGE,
-)
-change_download_folder = ctk.CTkButton(
-    sett_menu_frame_right,
-    text="變更下載位置",
-    command=select_download_folder,
-    width=CONTROL_SIZE[0],
-    height=CONTROL_SIZE[1],
-    font=FONT_LARGE,
-)
-
-ToolTip(change_download_folder, lambda: f"目前下載位置:\n{settings['download_folder']}")
-
-log_button = ctk.CTkButton(
-    sett_menu_frame_left,
-    text="查看日誌",
-    command=lambda: logger.show_log_window(root, ico_path),
-    width=CONTROL_SIZE[0],
-    height=CONTROL_SIZE[1],
-    font=FONT_LARGE,
-)
-
-status_var = ctk.StringVar(value=settings["check_button"])
-
-check_button = ctk.CTkCheckBox(
-    sett_menu_frame_right,
-    text="顯示操作確認提示",
-    variable=status_var,
-    onvalue="True",  # 勾選時的值
-    offvalue="False", # 未勾選時的值
-    command=choose_Check_value,
-    font=FONT_NORMAL
-)
-ToolTip(check_button, "啟用後將於下載全頻道影片時顯示確認提示")
-
-renew_status_var = ctk.StringVar(value=settings["renew_check_button"])
-renew_check_button = ctk.CTkCheckBox(
-    sett_menu_frame_right,
-    text="檢查更新",
-    variable=renew_status_var,
-    onvalue="True",  # 勾選時的值
-    offvalue="False", # 未勾選時的值
-    command=renew_choose_Check_value,
-    font=FONT_NORMAL
-)
-ToolTip(renew_check_button, "啟用後將於啟動時自動檢查新版本")
-#oauth_choose_Check_value
-oauth_status_var = ctk.StringVar(value=settings.get("oauth_check_button", "False"))
-oauth_check_button = ctk.CTkCheckBox(
-    sett_menu_frame_right,
-    text="啟用 OAuth2 裝置驗證",
-    variable=oauth_status_var,
-    onvalue="True",  # 勾選時的值
-    offvalue="False", # 未勾選時的值
-    command="",
-    font=FONT_NORMAL
-)
-ToolTip(oauth_check_button, "正在研究，非常抱歉")
-
-# 功能頁
-previous_button = ctk.CTkButton(root, text="←", corner_radius=10, width=40, height=40, command=function, font=FONT_LARGE)
-function_frame = ctk.CTkFrame(root, fg_color="transparent")
-wordbutton = ctk.CTkButton(function_frame, text="word pdf\n轉換", command=word, width=SECONDARY_BUTTON_SIZE[0], height=SECONDARY_BUTTON_SIZE[1], corner_radius=BUTTON_RADIUS, font=FONT_LARGE)
-wordbutton.pack(side="left",padx=20)
-mp4_to_mp3button = ctk.CTkButton(function_frame, text="MP4 \n轉\n MP3", command=mp3_page, width=SECONDARY_BUTTON_SIZE[0], height=SECONDARY_BUTTON_SIZE[1], corner_radius=BUTTON_RADIUS, font=FONT_LARGE)
-mp4_to_mp3button.pack(side="left",padx=20)
-
-# Word 頁
-wordlabel = ctk.CTkLabel(root, text="尚未選擇檔案或資料夾", font=FONT_LARGE, wraplength=480, anchor="w")
-wordstart_button = ctk.CTkButton(root, text="開始轉換", width=100, height=40, corner_radius=BUTTON_RADIUS, command=lambda:start_conversion(wordlabel, wordstart_button, first_open), font=FONT_LARGE, state=ctk.DISABLED)
-wordbrowse_file_button = ctk.CTkButton(root, text="瀏覽檔案", command=lambda:browse_file(wordlabel, wordstart_button, first_open), font=FONT_LARGE)
-wordbrowse_folder_button = ctk.CTkButton(root, text="瀏覽資料夾", command=lambda:browse_folder(wordlabel, wordstart_button, first_open), font=FONT_LARGE)
-
-# MP3 頁
-mp3label = ctk.CTkLabel(root, text="請選擇 MP4 檔案", width=400, height=30, font=FONT_LARGE)
-mp3start_button = ctk.CTkButton(root, text="開始轉換", state=ctk.DISABLED, command=lambda:convert_mp4_to_mp3(ffmpeg_path, first_open), font=FONT_LARGE)
-mp3browse_button = ctk.CTkButton(
-    root,
-    text="瀏覽",
-    command=lambda: mp3(mp3label, mp3start_button, first_open),
-    font=FONT_LARGE,
-)
-
-SETTING_PAGE_WIDGETS.extend(
-    [
-        sett_menu_frame,
-        sett_menu_frame_left,
-        sett_menu_frame_right,
-        backgroundcolor_menu,
-        changebutton,
-        change_download_folder,
-        log_button,
-        check_button,
-        renew_check_button,
-        oauth_check_button,
-    ]
-)
-
-PAGE_WIDGETS.extend(
-    [
-        text_label,
-        button_frame,
-        loadbutton,
-        backbutton,
-        url_box,
-        menu_frame,
-        dropdown_menu,
-        Image_quality_menu,
-        yt_button,
-        sett_menu_frame,
-        sett_menu_frame_left,
-        sett_menu_frame_right,
-        backgroundcolor_menu,
-        changebutton,
-        change_download_folder,
-        log_button,
-        check_button,
-        renew_check_button,
-        oauth_check_button,
-        function_frame,
-        wordbutton,
-        mp4_to_mp3button,
-        wordlabel,
-        wordbrowse_folder_button,
-        wordbrowse_file_button,
-        wordstart_button,
-        mp3label,
-        mp3browse_button,
-        mp3start_button,
-    ]
-)
-
-MENU_FONT = ("Arial", 12)
-
-
-def apply_menu_style() -> None:
-    """依目前主題更新兩個右鍵選單的顏色。"""
-    mode = settings.get("background_color", "Dark")
-    palette = MENU_PALETTES.get(mode, MENU_PALETTES["Light"])
-    options = {
-        "bg": palette["bg"],
-        "fg": palette["fg"],
-        "activebackground": palette["active_bg"],
-        "activeforeground": palette["active_fg"],
-        "font": MENU_FONT,
-    }
-    for context_menu in (menu, fuontionmenu):
-        context_menu.configure(**options)
-
-
-menu = tk.Menu(root, tearoff=0)
-menu.add_command(label="貼上", command=paste_text)
-menu.add_command(label="剪下", command=cut_text)
-menu.add_command(label="全選", command=select_all)
-menu.add_command(label="如何取得網址", command=teaching_3)
-
-fuontionmenu = tk.Menu(root, tearoff=0)
-fuontionmenu.add_command(label="官網教學", command=teaching)
-#fuontionmenu.add_command(label="設置 Cookies 教學", command=teaching_2)
-apply_menu_style()
-
-
-# --- 程式啟動後載入設定 ---
-if os.path.exists(json_file_path):
-    load()
-else:
-    ctk.set_appearance_mode("Dark")
-
-first_open = 1
-check_tool_updates(down_path, root)
-if settings["renew_check_button"] == "True":
-   check_for_updates(root, manual=False)
-
-
-
-root.mainloop()
+        self._next_turn((p + 1) % 4)
+
+    def decide_my_move(self):
+        """AI 決策，回傳要出的 card_id 集合 (空集合 = Pass)"""
+        hand = self.hand_cards()
+        if self.is_new_round and self.last_action_player == 0:
+            self.last_played_cards.clear()
+
+        obs = np.zeros(113, dtype=np.float32)
+        for c in hand: obs[c-1] = 1.0
+        for c in self.last_played_cards: obs[52+c-1] = 1.0
+        counts = np.array(self.others_count, dtype=np.float32)
+        obs[104:107] = counts / 13.0 if NORMALIZE_OPP_COUNTS else counts
+        obs[107 + self.last_action_player] = 1.0
+        obs[111] = float(self.pass_count)
+        obs[112] = float(self.is_new_round)
+
+        hand_vec = ids_to_vec(hand)
+        # 只有整局第一手 (桌面空且手上有梅花3) 才強制出梅花3
+        is_start = (not self.game_started) and not self.last_played_cards and hand_vec[0] == 1
+        mask, _ = get_action_mask_np(hand_vec, ids_to_vec(self.last_played_cards), is_start_of_game=is_start)
+        action_idx = self.agent.choose_action(obs, mask)
+        vec = INDEX_TO_ACTION_VECTOR[action_idx]
+        return {i + 1 for i, v in enumerate(vec) if v == 1}
+
+    def apply_my_move(self, ids):
+        """更新狀態並回傳要夾取的格子 (由左到右)"""
+        if not ids:
+            self._register_pass(0)
+            return []
+        card_slots = sorted(self.slot_of(c) for c in ids)
+        for s in card_slots:
+            self.slots[s] = None
+        self.last_played_cards = set(ids)
+        self.played_history |= set(ids)
+        self.is_new_round = False
+        self.game_started = True
+        self.pass_count = 0
+        self.last_action_player = 0
+        if not self.hand_cards():
+            self.game_over = True
+            print("🎉 手牌出完，你贏了！")
+        else:
+            self._next_turn(1)
+        return card_slots
+
+
+# =====================================================
+# 4. 主程序
+# =====================================================
+def main():
+    device = torch.device("cpu")
+    brain = BigTwoA2C()
+    brain.load_state_dict(torch.load(AI_MODEL_PATH, map_location=device))
+    agent = ModelAgent(brain, device, name="LiveAI")
+
+    reader = GeminiCardReader()
+    robot = RobotArm(COM_PORT)
+    hand_cam = Camera(HAND_CAMERA_INDEX, "HAND CAM")
+    play_cam = Camera(PLAY_CAMERA_INDEX, "PLAY CAM")
+    watcher = PlayZoneWatcher()
+    game = BigTwoGame(agent)
+
+    auto_mode = False
+    pending_hand = None           # Gemini 辨識出、尚未確認的手牌 (手動模式用)
+    temp_buffer = set()           # 手動模式: P 鍵辨識到的對手出牌
+    ai_suggestion = "Ready"
+    need_rebaseline = False       # 手臂動作完後要重設出牌區基準畫面
+    scan = {'running': False, 'result': None, 'then_auto': False}
+
+    def show_busy(frame, msg):
+        img = frame.copy()
+        put_text(img, msg, 40, 2.0, (0, 0, 255), 3)
+        cv2.imshow(WINDOW, img)
+        cv2.waitKey(1)
+
+    def start_scan(then_auto):
+        """背景執行：手臂依序到各排拍照點 -> 手牌鏡頭拍照 -> Gemini 辨識 -> 回初始點"""
+        def worker():
+            try:
+                result = scan_hand(robot, hand_cam, reader)
+            except Exception as e:
+                print(f"[Gemini] 呼叫失敗: {e}")
+                result = (None, False)
+                if robot.has_action(HOME) and not robot.abort.is_set():
+                    robot.run_sequence([HOME], return_home=False)
+                    robot.wait()
+            scan['result'] = result
+            scan['running'] = False
+
+        scan.update(running=True, result=None, then_auto=then_auto)
+        print("[系統] 📷 開始拍照辨識手牌...")
+        threading.Thread(target=worker, daemon=True).start()
+
+    def lock_hand(names):
+        ids = [get_card_id(n) for n in names]
+        first = None
+        if 1 not in ids:
+            ans = input("你沒有梅花3，是誰有梅花3? (輸入 2/3/4): ").strip()
+            first = int(ans) - 1 if ans in ('2', '3', '4') else 1
+        game.lock_hand(ids, first)
+        print("[系統] 手牌已鎖定:")
+        for s, c in game.slots.items():
+            print(f"   第 {s:2d} 格 -> {id_to_card_name(c)}")
+        print(f"[系統] 由 P{game.current_turn_player+1} 先出")
+
+    def enable_auto():
+        nonlocal auto_mode, need_rebaseline
+        missing = robot.missing_actions(
+            [a.format(slot=s) for s in range(1, NUM_SLOTS + 1) for a in CARD_ACTION_SEQUENCE])
+        if missing:
+            print(f"[警告] 缺少動作檔 {missing}，請先用 record.py 錄製")
+            return
+        if not robot.clamps_closed and not robot.close_clamps():
+            print("[警告] 排夾無法關閉，全自動未啟動")
+            return
+        # 先回初始點，到位後才開始偵測出牌區
+        robot.run_sequence([HOME], return_home=False)
+        need_rebaseline = True
+        auto_mode = True
+        print("[系統] ✅ 全自動模式啟動 (按 A 關閉、S 緊急停止、Space 可手動判對手 Pass)")
+
+    def play_my_turn():
+        """AI 決策 + 叫手臂出牌"""
+        nonlocal ai_suggestion, auto_mode
+        ids = game.decide_my_move()
+        if not ids:
+            ai_suggestion = "Pass"
+            print("> AI: Pass")
+            game.apply_my_move(ids)
+            return
+
+        ai_suggestion = names_str(ids)
+        slots_to_pick = game.apply_my_move(ids)
+        print(f"> AI 出牌: {ai_suggestion}  (格子: {slots_to_pick})")
+
+        seq = [a.format(slot=s) for s in slots_to_pick for a in CARD_ACTION_SEQUENCE]
+
+        def on_done(ok):
+            nonlocal need_rebaseline, auto_mode
+            need_rebaseline = True
+            if ok:
+                print("[手臂] ✅ 出牌動作完成")
+            else:
+                auto_mode = False
+                print("[手臂] ⚠️ 動作中斷，自動模式已關閉，請手動確認牌桌")
+
+        if not robot.run_sequence(seq, on_done=on_done):
+            auto_mode = False
+            ai_suggestion += " (ARM FAILED - 請手動出牌)"
+            print("[系統] 手臂無法執行，自動模式已關閉")
+
+    def check_play_zone(frame):
+        """出牌區有變化時呼叫 Gemini，找出對手新打出的牌"""
+        show_busy(frame, "Gemini: reading play area...")
+        try:
+            names = reader.read_played(frame)
+        except Exception as e:
+            print(f"[Gemini] 呼叫失敗: {e}")
+            return
+        seen = {get_card_id(n) for n in names} - {None}
+        new_ids = seen - game.played_history - game.hand_cards()
+        print(f"[Gemini] 出牌區: {names_str(seen)} -> 新的牌: {names_str(new_ids) or '(無)'}")
+        if not new_ids:
+            return
+        if not (1 <= len(new_ids) <= 5) or not game.is_legal_play(new_ids):
+            print(f"[警告] {names_str(new_ids)} 不是合法出牌，可能辨識錯誤；"
+                  f"請整理牌後再放一次，或按 P + Enter 手動輸入")
+            return
+        game.opponent_play(new_ids)
+
+    print("--- 大老二 AI + 機器手臂 ---")
+    print("[A] 全自動模式 開/關 (拍照辨識手牌、自動偵測對手出牌、輪到你時手臂自動出牌)")
+    print("手動: [H]拍照辨識手牌 [Y]確認 [E]修改格子 [P]辨識對手出牌 [Enter]提交/AI出牌 [Space]對手Pass")
+    print("[O]排夾 開/關  [C]清空緩衝 [R]重設(排夾打開) [S]緊急停止 [G]解除停止(回到跟隨示範臂) [Q]離開")
+
+    blank = np.zeros((720, 1280, 3), dtype=np.uint8)
+    while True:
+        frame = play_cam.read()
+        if frame is None:
+            frame = blank.copy()
+            put_text(frame, "PLAY CAM: no image", 400, 3.0, (0, 0, 255), 3)
+
+        # --- 手牌辨識結果 (背景執行緒完成後) ---
+        if scan['result'] is not None:
+            names, ok = scan['result']
+            scan['result'] = None
+            if names is not None:
+                if ok and scan['then_auto']:
+                    lock_hand(names)
+                    pending_hand = None
+                    enable_auto()
+                else:
+                    pending_hand = names
+                    print("[系統] 確認無誤請按 Y" if ok else "[系統] 請按 E 修正後按 Y，或再按 H 重拍")
+
+        # --- 手臂動作完成後重設基準 (避免手臂入鏡被誤判) ---
+        if need_rebaseline and not robot.busy and time.time() - robot.finished_at > ARM_SETTLE_SEC:
+            watcher.rebaseline(frame)
+            game.turn_started_at = time.time()
+            need_rebaseline = False
+
+        # --- 全自動流程 ---
+        if auto_mode and not robot.busy and not need_rebaseline and not game.game_over:
+            if game.current_turn_player == 0:
+                play_my_turn()
+            elif watcher.update(frame):
+                check_play_zone(frame)
+            elif (time.time() - game.turn_started_at > PASS_TIMEOUT_SEC
+                  and watcher.idle_seconds() > PASS_TIMEOUT_SEC):
+                print(f"[系統] P{game.current_turn_player+1} {PASS_TIMEOUT_SEC:.0f} 秒沒出牌，視為 Pass")
+                game.opponent_pass()
+            if game.game_over:
+                auto_mode = False
+
+        # --- UI：出牌區主畫面 ---
+        view = frame.copy()
+        draw_roi(view, PLAY_ROI, (255, 200, 0))
+        slot_str = " ".join(f"{s}:{id_to_card_name(c) if c else '--'}" for s, c in game.slots.items())
+        mode = 'SCANNING HAND' if scan['running'] else ('AUTO' if auto_mode else 'MANUAL')
+        y = 30
+        clamp = 'CLOSED' if robot.clamps_closed else 'OPEN'
+        put_text(view, f"MODE: {mode} | ARM: {robot.status} | CLAMP: {clamp}", y, 1.2, (255, 0, 255), 2); y += 30
+        put_text(view, f"SLOTS {slot_str}", y, 1.0, (0, 255, 0), 1); y += 30
+        if pending_hand:
+            pend = " ".join(f"{i+1}:{n}" for i, n in enumerate(pending_hand))
+            put_text(view, f"GEMINI(Y=OK) {pend}", y, 1.0, (0, 255, 255), 1); y += 30
+        put_text(view, f"LAST PLAY (P{game.last_action_player+1}): {names_str(game.last_played_cards)}", y, 1.2, (255, 200, 0), 2); y += 30
+        if temp_buffer:
+            put_text(view, f"BUFFER: {names_str(temp_buffer)}", y, 1.0, (200, 200, 200), 1); y += 30
+        turn_info = f"TURN: P{game.current_turn_player+1} | PASS: {game.pass_count} | OPP: {game.others_count}"
+        if auto_mode and game.current_turn_player != 0:
+            left = PASS_TIMEOUT_SEC - min(time.time() - game.turn_started_at, watcher.idle_seconds())
+            turn_info += f" | auto-pass in {max(0, left):.0f}s"
+        put_text(view, turn_info, y, 1.0, (255, 255, 255), 1); y += 35
+        put_text(view, f"AI: {ai_suggestion}", y, 1.5, (0, 0, 255), 2)
+        cv2.imshow(WINDOW, view)
+
+        # --- UI：手牌鏡頭小視窗 ---
+        hand_frame = hand_cam.read()
+        if hand_frame is not None:
+            draw_roi(hand_frame, HAND_ROI, (0, 255, 0))
+            h, w = hand_frame.shape[:2]
+            cv2.imshow(HAND_WINDOW, cv2.resize(hand_frame, (480, int(h * 480 / w))))
+
+        key = cv2.waitKey(1) & 0xFF
+
+        if key == ord('q'):
+            break
+
+        elif key == ord('s'):  # 緊急停止 (手臂播放中也有效)
+            robot.emergency_stop()
+            auto_mode = False
+
+        elif key == ord('g'):
+            robot.resume_live()
+            print("[系統] 已解除緊急停止，手臂回到跟隨示範臂模式")
+
+        elif robot.busy or scan['running']:
+            continue  # 手臂動作 / 拍照辨識中只接受 S / Q
+
+        elif key == ord('a'):  # 全自動開關
+            if auto_mode:
+                auto_mode = False
+                print("[系統] 全自動模式關閉")
+            elif not game.hand_locked:
+                start_scan(then_auto=True)   # 辨識完整就自動鎖定並開始
+            else:
+                enable_auto()
+
+        elif key == ord('h'):
+            start_scan(then_auto=False)
+
+        elif key == ord('e'):  # 手動修改某一格 (會暫停畫面等待輸入)
+            if pending_hand is None:
+                pending_hand = [id_to_card_name(c) if c else '??' for c in game.slots.values()]
+            txt = input("輸入要修改的格子與牌名，例如 5=SA (可用空白分隔多筆): ").strip()
+            for item in txt.split():
+                try:
+                    s, n = item.split('=')
+                    s = int(s)
+                    if 1 <= s <= NUM_SLOTS and get_card_id(n):
+                        pending_hand[s-1] = n.upper().replace('10', 'T')
+                    else:
+                        print(f"[警告] 無效輸入: {item}")
+                except ValueError:
+                    print(f"[警告] 格式錯誤: {item}")
+            print(f"[系統] 待確認手牌: {pending_hand}，按 Y 確認")
+
+        elif key == ord('y'):
+            if pending_hand is None:
+                print("[警告] 沒有待確認的手牌，請先按 H")
+                continue
+            ids = [get_card_id(n) for n in pending_hand]
+            if None in ids or len(set(ids)) != NUM_SLOTS:
+                print(f"[警告] 手牌不完整或有重複: {pending_hand}，請按 E 修正")
+                continue
+            lock_hand(pending_hand)
+            pending_hand = None
+
+        elif key == ord('p'):  # 手動: Gemini 辨識對手出的牌
+            show_busy(frame, "Gemini: reading played cards...")
+            try:
+                names = reader.read_played(frame)
+            except Exception as e:
+                print(f"[Gemini] 呼叫失敗: {e}")
+                continue
+            temp_buffer = {get_card_id(n) for n in names} - {None} - game.played_history
+            print(f"[Gemini] 對手出牌: {names_str(temp_buffer)} (按 Enter 提交，C 清空)")
+
+        elif key == 32:  # Space: 對手 Pass
+            if game.current_turn_player == 0:
+                print("[警告] 現在是你的回合")
+                continue
+            game.opponent_pass()
+            temp_buffer.clear()
+            if auto_mode:
+                watcher.rebaseline(frame)
+
+        elif key == ord('o'):  # 手動開關排夾
+            if auto_mode:
+                print("[警告] 全自動中不能開排夾，請先按 A 關閉全自動")
+            elif robot.clamps_closed:
+                robot.open_clamps()
+            else:
+                robot.close_clamps()
+
+        elif key == ord('c'):
+            temp_buffer.clear()
+            print("[系統] 緩衝區已清空")
+
+        elif key == ord('r'):
+            game.reset()
+            auto_mode = False
+            pending_hand = None
+            temp_buffer.clear()
+            ai_suggestion = "Ready"
+            robot.open_clamps()   # 新局：打開排夾讓你插牌
+            print("[系統] 遊戲狀態已完全重置")
+
+        elif key == 13:  # Enter (手動模式)
+            if game.current_turn_player == 0:
+                if not game.hand_locked:
+                    print("[警告] 尚未鎖定手牌，請先按 H 再按 Y")
+                    continue
+                play_my_turn()
+            elif temp_buffer:
+                game.opponent_play(temp_buffer)
+                temp_buffer = set()
+            else:
+                print(f"[警告] 現在是 P{game.current_turn_player+1} 的回合，請先按 P 辨識出牌，再按 Enter。")
+
+    hand_cam.release()
+    play_cam.release()
+    cv2.destroyAllWindows()
+
+
+if __name__ == "__main__":
+    main()

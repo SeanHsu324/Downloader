@@ -27,3 +27,11 @@ pip list -l
 
 #編譯成pyd
 python setup.py build_ext
+
+
+
+
+import cv2
+import numpy as np
+import torch
+from ultralytics import YOLO

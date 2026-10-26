@@ -1,268 +1,248 @@
-# Downloader
+# 大老二 AI 機器手臂
 
-## 📌 簡介
+用機器手臂實際上桌打大老二：Gemini 看牌、A2C 模型（`big_two_best.pth`）決定要出哪幾張、六軸手臂從手牌架夾牌並往前丟出。
 
-> 下載影片工具
-支援 Shorts、單一影片、播放清單、整個頻道下載
-可大量下載，但短時間內下載 100 部以上影片可能會被暫時限制，通常隔天即可恢復（屬於平台行為）
-
-
-
-
----
-
-## 📂 目錄
-
-- [功能特色](#功能特色)
-
-- [系統需求](#系統需求)
-
-- [安裝方式](#%EF%B8%8F%E5%AE%89%E8%A3%9D%E6%96%B9%E5%BC%8F)
-
-- [軟體教學和使用方法](https://sites.google.com/view/yt-to-dowload/%E6%95%99%E5%AD%B8)
-
-- [程式碼分享](#程式碼分享)
-
-- [開發與貢獻](#%E2%80%8D%E9%96%8B%E7%99%BC%E8%88%87%E8%B2%A2%E7%8D%BB)
-
-- [授權](#授權)
-
-
+```
+手牌鏡頭 ──(開局拍一次)──► Gemini ──► 13 格手牌對照表 ─┐
+                                                      ├─► A2C 決策 ──► 手臂 pick_XX → drop → home
+出牌鏡頭 ──(畫面有變化才拍)─► Gemini ──► 對手出了什麼 ──┘
+```
 
 ---
 
-## ✨功能特色
+## 硬體
 
-- 1️⃣ 免費！免費！免費！ 沒有下載次數限制
-- 2️⃣ 支援下載：
+| 項目 | 說明 |
+|---|---|
+| ESP32 + PCA9685 | 通道 0~5 是手臂 J1 底座 ~ J6 夾爪，通道 6、7 是排夾 J7、J8。序列埠 115200 |
+| 示範臂 | 6 顆可變電阻，用手擺動來教從手臂動作 |
+| 手牌架 | 手臂前方，分**第一排、第二排**兩區，共 13 格 |
+| 排夾 J7 / J8 | 用伺服馬達夾住第一排 / 第二排的牌。J7：0° 開、90° 關；J8：90° 開、0° 關 |
+| 手牌鏡頭 | 拍手牌架。手臂移到拍照點後拍照，一排拍一次 |
+| 出牌鏡頭 | 拍架子前方的出牌區 |
 
- >Shorts, 
-單一影片, 
-播放清單, 
-整個頻道
-- 3️⃣ 介面簡單，沒有複雜設定
+### ESP32 韌體（firmware/esp32_arm/esp32_arm.ino）
+用 Arduino IDE 開啟，板子選 **ESP32 Dev Module**，需要安裝函式庫 **Adafruit PWM Servo Driver Library**。
 
-- 4️⃣ 可自由更換喜歡的顏色主題
+| 指令 | 作用 |
+|---|---|
+| `P,j1,...,j6` | 播放模式：直接設定六軸角度 |
+| `s` | 緊急停止：手臂停在原地，**忽略所有 `P` 指令** |
+| `r` | 解除停止並回到即時連動。⚠️ **手臂會移向示範臂當下的姿勢**，送出前先把示範臂擺好 |
+| `C,j7,j8` / `C,OPEN` / `C,CLOSE` | 設定排夾角度 / 全開 / 全關。開機預設全開，緊急停止時不會動 |
+| `?` | 查詢狀態，回傳 `STATE,<模式>,j1,...,j6,j7,j8` |
 
-
-
----
-
-## 💻系統需求
-
-- Windows 10 以上
-
-- Python 3.12.9（原始碼執行時）
-
-
-
----
-
-## 🛠️安裝方式
-
-### 🪟 Windows（推薦）
-
-#### 🔐 安全性說明
-
-> 本程式（.exe）在執行時，Windows 可能會顯示安全性警告。
-這是正常現象，原因在於本專案尚未進行「程式碼簽章（Code Signing）」。
-程式碼簽章需支付額外費用，為了能夠讓使用者免費下載與使用本工具，目前未辦理簽章，因此 Windows 可能會顯示未知來源的警告提示。
-本專案為開源專案，所有程式碼皆公開於 GitHub，可自行檢視。
-
-#### 🔒 隱私與資料安全
-
-> 本程式不會蒐集、上傳或傳送任何使用者資料
-所有下載與處理行為皆於本機端執行
-cookie.txt 僅供本地使用，請勿分享給任何人
-若您對安全性仍有疑慮，可自行從原始碼進行打包與執行。
-
-#### 📄 免責聲明 (Disclaimer)
-> 本專案僅供技術交流、學術研究及個人學習用途。
-用途限制：請勿將本工具用於下載受版權保護、未經授權的內容，或進行任何商業用途。
-服務條款：使用者在使用本工具時，應自行確保符合 YouTube 服務條款 以及所在地區的相關法律規定。
-法律責任：本專案開發者對於使用者因不當使用本工具而導致的任何法律問題、帳號封禁或損失，概不承擔任何責任。
+- **即時連動模式**（開機預設）：從手臂跟著示範臂動，並回傳 `DATA,j1,...,j6`。**只有這個模式能錄製。**
+- **播放模式**：J1~J5 每個封包最多變化 10°。程式在兩個動作之間也會自動插值，每幀最多 8°。夾爪 J6 不限速，角度範圍和即時連動一樣是 5~180°。
+- 格式錯誤的 `P` 封包會被拒絕，回傳 `ERR:BAD_PACKET`。舊版韌體遇到格式錯誤會把該軸當成 0°，讓手臂暴衝。
+- Python 每播完一組動作，都會用 `?` 確認 ESP32 真的輸出到最後的角度。對不上就中止，並關閉全自動模式。
+- 用 `record.py` 的 `check` 指令可以做自我測試：狀態查詢 → J1 轉 5° 再轉回 → 確認緊急停止時不會動 → 回到即時連動。
+- ⚠️ 這裡的「確認到位」是確認 **ESP32 有送出對應的 PWM 訊號**。伺服馬達本身沒有角度回授，所以馬達卡住或沒電時偵測不到。
 
 ---
 
-#### 📥 安裝步驟
+## 檔案結構
 
-1. 前往
-   
-  舊網站
-  https://sites.google.com/view/yt-to-dowload
-  
-  新網站_bate
-  https://seanhsu324.github.io/Downloader/
-  
-  或 Releases
-  
-  下載 DownloaderSetup.exe
-
-
-2. 解壓縮至任意資料夾
-
-
-3. 雙擊 DownloaderSetup.exe，開始自動下載並安裝主程式
-
-
-
+```
+ES/
+├── main.py              主程式（全自動對戰）
+├── record.py            錄製動作 / 設定拍照點 / 測試辨識
+├── config.py            ★ 共用設定都在這裡改
+├── firmware/esp32_arm/  ESP32 韌體
+├── vision.py            鏡頭、Gemini 辨識、分排拍照流程
+├── robot_arm.py         手臂控制（播放、插值、回初始點、緊急停止）
+├── big_two_model.py     A2C 網路架構
+├── agents.py            ModelAgent（推論）
+├── action_space.py      4551 個動作的定義與合法動作遮罩
+├── big_two_core.py      牌型判斷 / 比大小
+├── big_two_core_wrapper.py + big_two_c_lib.dll   C 語言加速核心
+├── Ai_mod/big_two_best.pth                        決策模型
+├── actions/             錄好的手臂動作（record.py 會自動建立）
+├── webcam_snapshots/    每次拍手牌的照片（除錯用）
+└── 訓練資料/             訓練程式、YOLO 舊版、文件（上場不需要）
+```
 
 ---
 
-## 🐍 Python 原始碼版本
-> ⚠️ 此方式 無法自動更新，需自行手動更新 .py 檔案
+## 安裝
 
-安裝VScode
->https://code.visualstudio.com/download?_exp_download=fb315fc982
-
-安裝 python
-> https://www.python.org/downloads/windows/
-
-安裝 Git
-> https://share.google/fTlNpMDKaDorZP4lt
-
-安裝Visual Studio
->https://visualstudio.microsoft.com/zh-hant/visual-cpp-build-tools/
-
-勾選「使用 C++ 的桌面開發」 (Desktop development with C++)後按安裝 
-完成後重開 Visual Studio code
-
-下載node.js 放到"Downloader/nodsjs/"
-> https://nodejs.org/zh-tw/download
-
-需將nodejs.exe加入環境變數(下為教學影片)
-> https://drive.google.com/file/d/1DIcaG8Bd0rJ-_edpc0w6HeFnIPU4SUjs/view?usp=drive_link
-
-下載 FFmpeg 放到"Downloader/bin/ffmpeg/"：
-
-> https://github.com/SeanHsu324/FFmpeg/releases/download/v1.00/ffmpeg.rar
-
-
-在cmd或VScode 終端機中輸入:
-```bash
-git clone https://github.com/SeanHsu324/Downloader.git
-cd Downloader
-
-# 建立虛擬環境
+```powershell
 python -m venv venv
-
-# 允許執行虛擬環境（PowerShell）
 Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
-
-# 啟動虛擬環境
 .\venv\Scripts\Activate
-
-# 更新 pip 並安裝依賴
-pip install --upgrade pip
 pip install -r requirements.txt
+```
 
-#生成pyd
-python py2pyd.py build_ext
+上場會用到的套件：`torch`、`numpy`、`opencv-python`、`pyserial`、`google-genai`。
+
+### Gemini API Key
+```powershell
+$env:GEMINI_API_KEY="你的key"
+```
+預設模型是 `gemini-2.5-flash`。要換模型就設 `$env:GEMINI_MODEL="模型名稱"`。
+
+---
+
+## 設定（config.py）
+
+| 設定 | 說明 |
+|---|---|
+| `COM_PORT` | ESP32 的連接埠。設成 `None` 是模擬模式，不接手臂也能測流程 |
+| `HAND_CAMERA_INDEX` / `PLAY_CAMERA_INDEX` | 兩顆鏡頭的編號，用 `record.py` 的 `cams` 指令查 |
+| `HAND_ZONES` | 手牌架分排：每排的拍照點名稱和張數，**加總必須是 13** |
+| `HAND_ROI` / `PLAY_ROI` | 只辨識畫面中的某個區域 `(x, y, w, h)`，數值是 0~1 的比例。`None` 代表整張畫面 |
+| `HAND_REVERSED` | 鏡頭畫面左右和格子順序相反時，改成 `True` |
+| `PHOTO_SETTLE_SEC` | 手臂到拍照點後，等多久再拍照 |
+| `CLAMP_OPEN` / `CLAMP_CLOSED` | 排夾 J7、J8 開和關的角度 |
+
+**格子編號規則**：第一排由左到右是格子 1、2、3…，第二排接著往下編。「左右」是以**手牌鏡頭畫面**為準。
+
+```python
+HAND_ZONES = [
+    {'label': 'Row 1', 'pose': 'photo_1', 'count': 7},   # 格子 1~7
+    {'label': 'Row 2', 'pose': 'photo_2', 'count': 6},   # 格子 8~13
+]
 ```
 
 ---
 
-#### 🍪 建立 cookie.txt（與 main.py 放在同一資料夾）
+## 第一次設定：record.py
 
-- ⚠️ 請勿將 cookie.txt 分享給任何人
-- ⚠️ 本程式不會上傳或傳送 cookie，所有行為皆於本機執行
-- ⚠️ 即使為空白檔案，程式仍可正常執行
-
-建立空白檔案：
-```bash
-# Linux / macOS
-touch cookie.txt
-
-# Windows CMD
-type nul > cookie.txt
-
-# Windows PowerShell
-New-Item cookie.txt -ItemType File -Force
+```powershell
+python record.py
 ```
+執行後會開兩個預覽視窗（HAND CAM / PLAY CAM），終端機用來輸入指令。
+
+### 建議步驟
+1. `cams`：查鏡頭編號，填進 `config.py` 後重新執行。
+2. 擺好示範臂，輸入 `h`，存成**初始點**。
+3. 輸入 `b`，跑批次設定：
+   1. **拍照點** `photo_1`、`photo_2`：一邊看 HAND CAM，一邊移動示範臂，直到整排牌都入鏡、牌角清楚，再按 Enter。
+   2. **夾牌** `pick_01` ~ `pick_13`：從初始點出發 → 到該格夾緊 → 提起，停在「拿牌姿勢」。13 格最好都停在同一個姿勢。
+   3. **丟牌** `drop`：從拿牌姿勢開始，夾爪保持夾緊 → 往前甩 → 張開夾爪，讓牌落到出牌區。
+   - 每個動作都是按 Enter 開始、按 Enter 結束。錄完可以 `p` 試播、`r` 重錄。開頭和結尾手臂沒在動的空檔，程式會自動剪掉。
+4. 測試：
+   - `t 5`：測試出第 5 格的牌
+   - `v 1`：拍第一排並用 Gemini 辨識
+   - `v all`：跑一次完整的手牌辨識
+   - `v p`：辨識出牌區
+5. `3`：檢查 main.py 需要的動作是否都齊全。
+
+### 指令一覽
+| 指令 | 作用 |
+|---|---|
+| `h` | 把目前姿勢設為初始點 |
+| `c 排號` | 把目前姿勢設為該排的拍照點（例：`c 1`） |
+| `b` | 批次設定：拍照點 → pick_01~13 → drop |
+| `1 名稱` | 錄製單一動作（例：`1 pick_05`） |
+| `2 名稱` | 刪除動作 |
+| `3` | 列出動作，並檢查是否齊全 |
+| `4 名稱` | 播放動作，播完自動回初始點 |
+| `home` | 回到初始點 |
+| `go 排號` | 移到該排拍照點並停住 |
+| `t 格號` | 測試出某格牌：pick → drop → home |
+| `v 排號` / `v all` / `v p` | 測試 Gemini 辨識 |
+| `snap` | 兩顆鏡頭各存一張照片 |
+| `clamp open` / `clamp close` | 排夾開 / 關。也可以用 `clamp 45 45` 直接指定 J7、J8 的角度 |
+| `check` | ESP32 自我測試（J1 會轉 5° 再轉回） |
+| `cams` | 列出可用的鏡頭編號 |
+| `s` / `r` | 緊急停止 / 解除停止並回到即時連動 |
+| `exit` | 離開 |
+
+### 需要的動作檔（actions/）
+| 名稱 | 內容 |
+|---|---|
+| `home` | 初始點（單一姿勢） |
+| `photo_1`, `photo_2` | 各排的拍照點（單一姿勢） |
+| `pick_01` ~ `pick_13` | 夾第 N 格的牌 |
+| `drop` | 往前丟牌 |
 
 ---
 
-#### 📁 建立更新資料夾（原始碼模式）
+## 上場：main.py
 
-在 C:\ 建立資料夾：
-
-C:\downloadsitt
-
-並建立 renew.json（避免錯誤，實際上不影響功能）：
-```json
-
-{
-    "檔案名稱": "Downloader.exe",
-    "版本": "(自行填寫版本)",
-    "下載位置": "(main.py 所在資料夾路徑 如: C:\\Downloader)",
-    "最後更新時間": ""
-}
-
-```
----
-#### ▶️執行
-
-執行main.py
-```bush
+```powershell
 python main.py
 ```
 
+### 開局
+1. 13 張牌插進手牌架（第一排、第二排）。
+2. 按 **`A`**，程式會：
+   1. 手臂依序到 `photo_1`、`photo_2` 拍照，Gemini 讀出每一格的牌。手臂回初始點後，**排夾關閉**，夾住手牌。
+   2. 辨識結果完整，就自動鎖定手牌並進入全自動模式。不完整的話，用 `E` 手動修改，再按 `Y` 確認。
+   3. 如果你沒有梅花 3，終端機會問是誰有。
+
+### 全自動流程
+- **輪到你**：AI 決策 → 手臂依序把每一張牌 `pick_XX → drop → home`。
+- **輪到對手**：出牌區畫面有變化並靜止 1 秒後，才呼叫一次 Gemini。看到的牌扣掉整局已經出過的牌，剩下的就是新出的牌。新的牌必須壓得過上一手才會採用，避免辨識錯誤把狀態弄亂。
+- **對手 Pass**：出牌區 15 秒沒有動靜就自動判定 Pass，也可以按 `Space` 立即判定。
+
+### 對手須知
+- 牌要**正面朝上**放進出牌區，疊在上一手上面也可以。
+- 放好後手要移開，畫面靜止後才會開始辨識。
+
+### 按鍵
+| 按鍵 | 作用 |
+|---|---|
+| `A` | 全自動模式開 / 關 |
+| `S` | **緊急停止**（手臂動作中也有效） |
+| `G` | 解除停止，回到跟隨示範臂 |
+| `H` | 拍照辨識手牌（手動模式） |
+| `E` | 修改某一格，例如輸入 `5=SA`（可用空白隔開多筆） |
+| `Y` | 確認手牌 |
+| `P` | 辨識對手出牌（手動模式），之後按 `Enter` 提交 |
+| `Enter` | 輪到你：AI 出牌；輪到對手：提交 `P` 的辨識結果 |
+| `Space` | 對手 Pass |
+| `O` | 排夾開 / 關（全自動中不能用） |
+| `C` | 清空暫存 |
+| `R` | 重設整局，並打開排夾 |
+| `Q` | 離開 |
+
+### 可調參數（main.py 開頭）
+| 參數 | 預設 | 說明 |
+|---|---|---|
+| `MOTION_THRESH` | 4.0 | 畫面差異大於這個值，代表有東西在動 |
+| `CHANGE_THRESH` | 10.0 | 畫面靜止後，和上次比差異大於這個值，才呼叫 Gemini |
+| `STABLE_SEC` | 1.0 | 畫面要靜止多久，才判定牌已放好 |
+| `PASS_TIMEOUT_SEC` | 15.0 | 對手回合多久沒動靜，判定為 Pass |
+| `NORMALIZE_OPP_COUNTS` | False | 對手剩餘牌數要不要除以 13（要和訓練時的設定一致） |
+
 ---
 
-## 📖軟體教學和使用方法
+## 牌名規則
 
-👉 https://sites.google.com/view/yt-to-dowload/%E6%95%99%E5%AD%B8
+花色字母 + 點數字母，固定 2 個字元。Gemini 只能回傳這 52 種名稱。
 
+- 花色：`C` 梅花、`D` 方塊、`H` 紅心、`S` 黑桃
+- 點數（小 → 大）：`3 4 5 6 7 8 9 T J Q K A 2`（`T` = 10）
+- 例：`C3` 梅花 3、`DT` 方塊 10、`SA` 黑桃 A、`H2` 紅心 2
+
+內部編號 1~52 = 花色 × 13 + 點數 + 1（梅花 3 = 1，黑桃 2 = 52）。
 
 ---
 
-## 💡程式碼分享
+## 常見問題
 
-#### 🎨 HEX 顏色變暗（按鈕 hover 效果）
-```python
-import colorsys
+| 狀況 | 處理 |
+|---|---|
+| 鏡頭開不起來 | 用 `record.py` 的 `cams` 查編號，再改 `config.py` |
+| 手牌少算或多算一張 | 到 `webcam_snapshots/` 看照片，調整拍照點（`c 1`）或 `HAND_ROI`，讓牌角清楚 |
+| 手臂一入鏡就被當成有人出牌 | 設定 `PLAY_ROI`，只框出牌區 |
+| 對手出牌沒被偵測到 | 調低 `CHANGE_THRESH`，或改用 `P` + `Enter` 手動輸入 |
+| 還沒出牌就被判 Pass | 調高 `PASS_TIMEOUT_SEC` |
+| 錄製時沒有錄到點位 | ESP32 要在即時連動模式。record.py 錄製前會自動送 `r` |
+| 手臂抖或動作銜接太猛 | 調低 `robot_arm.py` 的 `MAX_STEP_DEG` |
+| 牌丟不夠遠 | 重錄 `drop` 時甩快一點，或改成伸到出牌區上方再放開 |
 
-def darken_color(color: str, percent: float):
-    color = color.lstrip("#")
-    r, g, b = int(color[0:2], 16), int(color[2:4], 16), int(color[4:6], 16)
+---
 
-    h, l, s = colorsys.rgb_to_hls(r / 255, g / 255, b / 255)
-    l = max(0, l - (percent / 100))
+## 重新訓練 AI
 
-    r, g, b = colorsys.hls_to_rgb(h, l, s)
-    return f"#{int(r*255):02X}{int(g*255):02X}{int(b*255):02X}"
+訓練相關檔案都在 `訓練資料/AI決策訓練/`，需要另外安裝 `gymnasium`：
+```powershell
+pip install gymnasium
+python 訓練資料/AI決策訓練/train_a2c.py
 ```
-使用方式：
-```python
-darken_color("#80ff42", 20)
+訓練出來的模型會存成 `big_two_a2c_epXXXX.pth`。挑表現最好的一個，複製成 `Ai_mod/big_two_best.pth`。
 
-```
----
-
-#### 🌗 判斷顏色是否為淺色（文字自動變黑 / 白）
-```python
-def is_light_color(hex_color):
-    hex_color = hex_color.lstrip('#')
-    r, g, b = int(hex_color[0:2], 16), int(hex_color[2:4], 16), int(hex_color[4:6], 16)
-    brightness = (r * 299 + g * 587 + b * 114) / 1000
-    return brightness > 127
-
-```
----
-
-## 👨‍💻開發與貢獻
->
-作者：[SeanHsu324](https://github.com/SeanHsu324)
-
-歡迎 Issue / PR / Fork
-
-
-
----
-
-## 📄授權
-
-本專案採用 [MIT License](LICENSE) 授權。
-你可以自由使用、修改與散布此程式碼。
-
-© 2026/8 [SeanHsu324](https://github.com/SeanHsu324)
+> 狀態向量為 113 維：手牌 52、上一手 52、對手剩餘牌數 3、最後出牌者 4、連續 Pass 數 1、是否新回合 1。
