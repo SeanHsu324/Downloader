@@ -104,7 +104,7 @@ Downloader 是一套介面簡潔、操作直覺的影片下載工具，適用於
 | 檔案 | 放置位置 | 下載連結 |
 | --- | --- | --- |
 | Node.js | `Downloader/nodsjs/` | https://nodejs.org/zh-tw/download |
-| FFmpeg | `Downloader/bin/ffmpeg/` | https://github.com/SeanHsu324/FFmpeg/releases/download/v1.00/ffmpeg.rar |
+| FFmpeg | `Downloader/bin/ffmpeg/` | https://ffmpeg.org/download.html |
 
 Node.js 需將 `node.exe` 加入系統環境變數，可參考
 [教學影片](https://drive.google.com/file/d/1DIcaG8Bd0rJ-_edpc0w6HeFnIPU4SUjs/view?usp=drive_link)。
